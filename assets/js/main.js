@@ -2,8 +2,9 @@
 (() => {
   'use strict';
 
-  /* ⚙️ Número do WhatsApp (somente dígitos, com 55 + DDD). Ajuste aqui se necessário. */
-  const WHATSAPP = '551732722726';
+  /* ⚙️ Números do WhatsApp (somente dígitos, com 55 + DDD). */
+  const WHATSAPP = '5517988470429';      // Secretaria e Pedagógico
+  const WHATSAPP_UNIP = '5517981260002'; // Secretaria Objetivo · UNIP EAD
   const EMAIL = 'secretariafet@tanabinet.com.br';
 
   const $ = (s, c = document) => c.querySelector(s);
@@ -12,7 +13,7 @@
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
   };
-  const waLink = (msg) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
+  const waLink = (msg, num = WHATSAPP) => `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 
   /* Ano no rodapé */
   const ano = $('#ano'); if (ano) ano.textContent = new Date().getFullYear();
@@ -157,7 +158,7 @@
     if (via === 'email') {
       window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent('Contato pelo site – ' + data.segmento)}&body=${encodeURIComponent(msg)}`;
     } else {
-      window.open(waLink(msg), '_blank', 'noopener');
+      window.open(waLink(msg, data.segmento === 'Polo UNIP EAD' ? WHATSAPP_UNIP : WHATSAPP), '_blank', 'noopener');
     }
   });
 })();
