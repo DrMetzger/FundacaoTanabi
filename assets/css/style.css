@@ -147,13 +147,15 @@ html.hc .topbar { background: #fff; }
 .brand__text strong { font-family: var(--font-display); font-size: 1.08rem; white-space: nowrap; }
 .brand__text span { font-size: .78rem; color: var(--on-surface-var); font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
 
-.nav { display: none; margin-left: auto; gap: 4px; }
+.nav { display: none; margin-left: auto; gap: 2px; align-items: center; flex-wrap: nowrap; }
 .nav a {
+  white-space: nowrap; line-height: 1.2;
   padding: 8px 14px; border-radius: 999px; text-decoration: none; color: var(--on-surface);
   font-weight: 700; font-size: .95rem; transition: background .2s, color .2s;
 }
 .nav a:hover, .nav a.is-active { background: var(--primary-container); color: var(--primary); }
-.topbar__actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.topbar__actions { margin-left: auto; display: flex; align-items: center; gap: 4px; flex: none; }
+.topbar .btn { white-space: nowrap; }
 .hide-sm { display: none; }
 
 .a11y-panel {
@@ -488,9 +490,14 @@ html.hc .topbar { background: #fff; }
   .form__actions { grid-template-columns: 1fr 1fr; }
 }
 
-@media (min-width: 1024px) and (max-width: 1140px) {
-  .nav a { padding: 8px 10px; font-size: .9rem; }
-  .hide-sm { display: none; }
+/* Entre 1024 e 1279px o menu completo não cabe: usa o menu lateral */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .nav { display: none; }
+  .menu-btn { display: inline-grid; }
+  .topbar__actions { margin-left: auto; }
+}
+@media (min-width: 1280px) and (max-width: 1399px) {
+  .nav a { padding: 8px 10px; font-size: .92rem; }
 }
 
 /* ================= Concurso de Bolsas ================= */
