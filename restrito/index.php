@@ -11,6 +11,7 @@ require_once dirname(__DIR__) . '/api/lib/xlsx.php';
 
 date_default_timezone_set('America/Sao_Paulo');
 $pasta = pastaDados();
+aplicarZeramento($pasta);
 
 header('Cache-Control: no-store, private');
 header('X-Frame-Options: DENY');
@@ -116,8 +117,10 @@ if ($logado && $acao !== '') {
         foreach (explode(',', $ids) as $n) if (isset($porNumero[trim($n)])) $sel[] = $porNumero[trim($n)];
         return $sel;
     };
-    $aceiteDe = fn(array $r): string => 'Declaração e ciência aceitas eletronicamente pelo(a) responsável legal ' . $r['resp_nome']
-        . ' em ' . str_replace(' ', ' às ', substr($r['data'], 0, 16)) . ($r['ip'] !== '' ? ' (IP ' . $r['ip'] . ')' : '') . '.';
+    $aceiteDe = fn(array $r): string => str_starts_with($r['ip'], 'manual:')
+        ? 'Inscrição registrada pela secretaria na área restrita (usuário ' . substr($r['ip'], 7) . ') em ' . str_replace(' ', ' às ', substr($r['data'], 0, 16)) . '.'
+        : 'Declaração e ciência aceitas eletronicamente pelo(a) responsável legal ' . $r['resp_nome']
+          . ' em ' . str_replace(' ', ' às ', substr($r['data'], 0, 16)) . ($r['ip'] !== '' ? ' (IP ' . $r['ip'] . ')' : '') . '.';
     $pdfDe = function (array $r) use ($pasta, $aceiteDe): array {
         $existentes = glob($pasta . '/Ficha-Inscricao-' . $r['numero'] . '-*.pdf') ?: [];
         if ($existentes) return [basename($existentes[0]), (string) file_get_contents($existentes[0])];
@@ -218,6 +221,68 @@ if ($logado && $acao !== '') {
         json($ok ? ['ok' => true, 'msg' => "$qtd inscriç" . ($qtd === 1 ? 'ão enviada' : 'ões enviadas') . ' para ' . implode(', ', $para) . '.'] : ['ok' => false, 'erro' => 'Falha ao enviar o e-mail.'], $ok ? 200 : 500);
     }
 
+    /* ---------- Incluir / alterar ---------- */
+    if ($acao === 'salvar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (!csrfOk()) json(['ok' => false, 'erro' => 'Sessão expirada. Recarregue a página.'], 403);
+        $campos = ['aluno_nome' => 120, 'aluno_nascimento' => 10, 'aluno_cpf' => 14, 'aluno_rg' => 20, 'aluno_email' => 120,
+                   'escola_atual' => 120, 'serie_2026' => 60, 'serie_2027' => 60, 'resp_nome' => 120, 'resp_vinculo' => 40,
+                   'resp_cpf' => 14, 'whatsapp' => 20, 'telefone_alt' => 20, 'email' => 120, 'outro_contato' => 160,
+                   'rua' => 160, 'bairro' => 80, 'cidade' => 80, 'cep' => 9];
+        $novo = [];
+        foreach ($campos as $k => $max) $novo[$k] = mb_substr(trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string) ($_POST[$k] ?? ''))), 0, $max);
+        $faltando = array_filter(['aluno_nome' => 'nome do aluno', 'serie_2027' => 'série pretendida em 2027', 'resp_nome' => 'nome do responsável', 'whatsapp' => 'WhatsApp'],
+            fn($k) => $novo[$k] === '', ARRAY_FILTER_USE_KEY);
+        if ($faltando) json(['ok' => false, 'erro' => 'Preencha: ' . implode(', ', $faltando) . '.'], 422);
+        if ($novo['aluno_nascimento'] !== '' && !DateTime::createFromFormat('!d/m/Y', $novo['aluno_nascimento'])) json(['ok' => false, 'erro' => 'Data de nascimento deve estar no formato dd/mm/aaaa.'], 422);
+        foreach (['email' => 'responsável', 'aluno_email' => 'aluno'] as $k => $q) {
+            if ($novo[$k] !== '' && !filter_var($novo[$k], FILTER_VALIDATE_EMAIL)) json(['ok' => false, 'erro' => "E-mail do $q inválido."], 422);
+        }
+        $n = (string) ($_POST['n'] ?? '');
+        $usuario = (string) $_SESSION['adm'];
+        $res = comTrava($pasta, function ($lock) use ($pasta, $n, $novo, $usuario) {
+            $lista = lerInscricoes($pasta);
+            if ($n === '') {
+                $r = $novo + ['numero' => proximoNumero($lock), 'data' => date('d/m/Y H:i:s'), 'ip' => 'manual:' . $usuario];
+                $lista[] = $r;
+            } else {
+                $i = array_search($n, array_column($lista, 'numero'), true);
+                if ($i === false) return ['ok' => false, 'erro' => 'Inscrição não encontrada.'];
+                $r = $lista[$i] = $novo + $lista[$i];
+                apagarPdfs($pasta, $n);   // o PDF é gerado de novo com os dados alterados
+                @file_put_contents($pasta . '/alteracoes.log', date('c') . " $usuario alterou $n\n", FILE_APPEND);
+            }
+            if (!gravarInscricoes($pasta, $lista)) return ['ok' => false, 'erro' => 'Não foi possível gravar a planilha.'];
+            return ['ok' => true, 'registro' => $r, 'msg' => $n === '' ? "Inscrição {$r['numero']} incluída." : "Inscrição $n alterada."];
+        });
+        json($res ?? ['ok' => false, 'erro' => 'Servidor ocupado. Tente novamente.'], ($res['ok'] ?? false) ? 200 : 422);
+    }
+
+    /* ---------- Excluir (vai para o arquivo de excluídas) ---------- */
+    if ($acao === 'excluir' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (!csrfOk()) json(['ok' => false, 'erro' => 'Sessão expirada. Recarregue a página.'], 403);
+        $n = (string) ($_POST['n'] ?? '');
+        $usuario = (string) $_SESSION['adm'];
+        $res = comTrava($pasta, function () use ($pasta, $n, $usuario) {
+            $lista = lerInscricoes($pasta);
+            $i = array_search($n, array_column($lista, 'numero'), true);
+            if ($i === false) return ['ok' => false, 'erro' => 'Inscrição não encontrada.'];
+            $r = $lista[$i];
+            array_splice($lista, $i, 1);
+            $exc = $pasta . '/excluidas/excluidas.csv';
+            @mkdir(dirname($exc), 0700, true);
+            $nova = !is_file($exc);
+            if ($fh = fopen($exc, 'a')) {
+                if ($nova) { fwrite($fh, "\xEF\xBB\xBF"); fputcsv($fh, array_merge(['Excluída em', 'Excluída por'], array_keys(CSV_CAMPOS)), ';'); }
+                fputcsv($fh, array_merge([date('d/m/Y H:i:s'), $usuario], linhaCsv($r)), ';');
+                fclose($fh);
+            }
+            apagarPdfs($pasta, $n, $pasta . '/excluidas');
+            if (!gravarInscricoes($pasta, $lista)) return ['ok' => false, 'erro' => 'Não foi possível gravar a planilha.'];
+            return ['ok' => true, 'msg' => "Inscrição $n excluída."];
+        });
+        json($res ?? ['ok' => false, 'erro' => 'Servidor ocupado. Tente novamente.'], ($res['ok'] ?? false) ? 200 : 422);
+    }
+
     http_response_code(400);
     exit('Ação inválida.');
 }
@@ -305,8 +370,9 @@ $inscricoes = $logado ? array_reverse(lerInscricoes($pasta)) : [];
         </div>
         <select id="fSerie" aria-label="Filtrar por série 2027"><option value="">Todas as séries 2027</option></select>
         <div class="toolbar__acoes">
-          <button class="btn btn--tonal" id="btnExcel" type="button"><span class="ms" aria-hidden="true">table_view</span> <span class="so-desk">Exportar</span>Excel</button>
-          <button class="btn btn--filled" id="btnEmail" type="button"><span class="ms" aria-hidden="true">forward_to_inbox</span> <span class="so-desk">Enviar por</span><span class="so-mobile">Enviar</span>e-mail</button>
+          <button class="btn btn--accent" id="btnNovo" type="button"><span class="ms" aria-hidden="true">person_add</span> <span class="so-desk">Nova inscrição</span><span class="so-mobile">Incluir</span></button>
+          <button class="btn btn--tonal" id="btnExcel" type="button"><span class="ms" aria-hidden="true">table_view</span> <span class="so-desk">Exportar Excel</span><span class="so-mobile">Excel</span></button>
+          <button class="btn btn--filled" id="btnEmail" type="button"><span class="ms" aria-hidden="true">forward_to_inbox</span> <span class="so-desk">Enviar por e-mail</span><span class="so-mobile">E-mail</span></button>
         </div>
       </div>
       <div class="selecao" id="selecao" hidden>
@@ -351,6 +417,81 @@ $inscricoes = $logado ? array_reverse(lerInscricoes($pasta)) : [];
       <a class="btn btn--tonal" id="fichaPdf" target="_blank" rel="noopener"><span class="ms" aria-hidden="true">picture_as_pdf</span> Ver PDF</a>
       <a class="btn btn--whats" id="fichaWa" target="_blank" rel="noopener"><span class="ms" aria-hidden="true">chat</span> WhatsApp</a>
       <button class="btn btn--filled" id="fichaEmail" type="button"><span class="ms" aria-hidden="true">forward_to_inbox</span> Enviar ficha</button>
+    </div>
+    <div class="dlg__foot dlg__foot--crud">
+      <button class="btn btn--outlined" id="fichaAlterar" type="button"><span class="ms" aria-hidden="true">edit</span> Alterar</button>
+      <button class="btn btn--perigo" id="fichaExcluir" type="button"><span class="ms" aria-hidden="true">delete</span> Excluir</button>
+    </div>
+  </dialog>
+
+
+  <!-- Incluir / alterar -->
+  <dialog class="dlg dlg--lado" id="dlgEditar" aria-labelledby="editTitulo">
+    <form id="formEditar" method="dialog" novalidate>
+      <div class="dlg__head">
+        <div><span class="eyebrow" id="editSub">Nova inscrição</span><h2 id="editTitulo">Incluir inscrição</h2></div>
+        <button class="icon-btn" type="button" data-fechar aria-label="Fechar"><span class="ms" aria-hidden="true">close</span></button>
+      </div>
+      <div class="dlg__body">
+        <h3 class="ed-sec">Dados do(a) aluno(a)</h3>
+        <div class="ed-grid">
+          <div class="field ed-12"><input id="e_aluno_nome" name="aluno_nome" placeholder=" " required maxlength="120"><label for="e_aluno_nome">Nome completo do(a) aluno(a) *</label></div>
+          <div class="field ed-4"><input id="e_aluno_nascimento" name="aluno_nascimento" placeholder=" " inputmode="numeric" data-mask="data" maxlength="10"><label for="e_aluno_nascimento">Nascimento (dd/mm/aaaa)</label></div>
+          <div class="field ed-4"><input id="e_aluno_cpf" name="aluno_cpf" placeholder=" " inputmode="numeric" data-mask="cpf" maxlength="14"><label for="e_aluno_cpf">CPF do aluno</label></div>
+          <div class="field ed-4"><input id="e_aluno_rg" name="aluno_rg" placeholder=" " maxlength="20"><label for="e_aluno_rg">RG</label></div>
+          <div class="field ed-12"><input id="e_aluno_email" name="aluno_email" type="email" placeholder=" " maxlength="120"><label for="e_aluno_email">E-mail do aluno</label></div>
+          <div class="field ed-12"><input id="e_escola_atual" name="escola_atual" placeholder=" " maxlength="120"><label for="e_escola_atual">Escola atual</label></div>
+          <div class="field ed-6"><select id="e_serie_2026" name="serie_2026"><option value=""></option>
+                    <option>Educação Infantil</option>
+                    <option>1º ano – Fundamental</option><option>2º ano – Fundamental</option><option>3º ano – Fundamental</option>
+                    <option>4º ano – Fundamental</option><option>5º ano – Fundamental</option><option>6º ano – Fundamental</option>
+                    <option>7º ano – Fundamental</option><option>8º ano – Fundamental</option><option>9º ano – Fundamental</option>
+                    <option>1ª série – Médio</option><option>2ª série – Médio</option><option>3ª série – Médio</option></select><label for="e_serie_2026">Série cursada em 2026</label></div>
+          <div class="field ed-6"><select id="e_serie_2027" name="serie_2027" required><option value=""></option>
+                    <option>Educação Infantil</option>
+                    <option>1º ano – Fundamental</option><option>2º ano – Fundamental</option><option>3º ano – Fundamental</option>
+                    <option>4º ano – Fundamental</option><option>5º ano – Fundamental</option><option>6º ano – Fundamental</option>
+                    <option>7º ano – Fundamental</option><option>8º ano – Fundamental</option><option>9º ano – Fundamental</option>
+                    <option>1ª série – Médio</option><option>2ª série – Médio</option><option>3ª série – Médio</option></select><label for="e_serie_2027">Série pretendida em 2027 *</label></div>
+        </div>
+        <h3 class="ed-sec">Responsável e contatos</h3>
+        <div class="ed-grid">
+          <div class="field ed-12"><input id="e_resp_nome" name="resp_nome" placeholder=" " required maxlength="120"><label for="e_resp_nome">Nome do responsável *</label></div>
+          <div class="field ed-6"><select id="e_resp_vinculo" name="resp_vinculo"><option value=""></option><option>Mãe</option><option>Pai</option><option>Avó / Avô</option><option>Tia / Tio</option><option>Tutor(a) legal</option><option>Outro</option></select><label for="e_resp_vinculo">Vínculo</label></div>
+          <div class="field ed-6"><input id="e_resp_cpf" name="resp_cpf" placeholder=" " inputmode="numeric" data-mask="cpf" maxlength="14"><label for="e_resp_cpf">CPF do responsável</label></div>
+          <div class="field ed-6"><input id="e_whatsapp" name="whatsapp" placeholder=" " inputmode="tel" data-mask="tel" maxlength="15" required><label for="e_whatsapp">WhatsApp *</label></div>
+          <div class="field ed-6"><input id="e_telefone_alt" name="telefone_alt" placeholder=" " inputmode="tel" data-mask="tel" maxlength="15"><label for="e_telefone_alt">Telefone alternativo</label></div>
+          <div class="field ed-12"><input id="e_email" name="email" type="email" placeholder=" " maxlength="120"><label for="e_email">E-mail do responsável</label></div>
+          <div class="field ed-12"><input id="e_outro_contato" name="outro_contato" placeholder=" " maxlength="160"><label for="e_outro_contato">Outro contato</label></div>
+        </div>
+        <h3 class="ed-sec">Endereço</h3>
+        <div class="ed-grid">
+          <div class="field ed-4"><input id="e_cep" name="cep" placeholder=" " inputmode="numeric" data-mask="cep" maxlength="9"><label for="e_cep">CEP</label></div>
+          <div class="field ed-8"><input id="e_rua" name="rua" placeholder=" " maxlength="160"><label for="e_rua">Rua / avenida e número</label></div>
+          <div class="field ed-6"><input id="e_bairro" name="bairro" placeholder=" " maxlength="80"><label for="e_bairro">Bairro</label></div>
+          <div class="field ed-6"><input id="e_cidade" name="cidade" placeholder=" " maxlength="80"><label for="e_cidade">Cidade/UF</label></div>
+        </div>
+        <p class="form__error" id="editErro" role="alert" hidden></p>
+      </div>
+      <div class="dlg__foot">
+        <button class="btn btn--outlined" type="button" data-fechar>Cancelar</button>
+        <button class="btn btn--filled" type="submit" id="editSalvar"><span class="ms" aria-hidden="true">save</span> <span class="lbl">Salvar</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Confirmar exclusão -->
+  <dialog class="dlg dlg--confirma" id="dlgExcluir" aria-labelledby="excTitulo">
+    <div class="dlg__body">
+      <div class="exc-icone"><span class="ms" aria-hidden="true">delete_forever</span></div>
+      <h2 id="excTitulo">Excluir inscrição?</h2>
+      <p id="excTexto"></p>
+      <p class="dica">A inscrição sai da lista. Uma cópia fica guardada no servidor (pasta "excluidas"), por segurança.</p>
+      <p class="form__error" id="excErro" role="alert" hidden></p>
+    </div>
+    <div class="dlg__foot">
+      <button class="btn btn--outlined" type="button" data-fechar>Cancelar</button>
+      <button class="btn btn--perigo" type="button" id="excConfirmar"><span class="ms" aria-hidden="true">delete</span> <span class="lbl">Excluir</span></button>
     </div>
   </dialog>
 

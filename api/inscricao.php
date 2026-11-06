@@ -116,17 +116,7 @@ $colunas = ['Nº inscrição', 'Data/hora', 'Aluno', 'Nascimento', 'CPF aluno', 
 $lock = fopen($pasta . '/contador.lock', 'c+');
 if (!$lock || !flock($lock, LOCK_EX)) responder(false, ['erro' => 'Servidor ocupado. Tente novamente.'], 503);
 
-/* Zera a numeração uma única vez quando ZERAR_NUMERACAO muda: arquiva planilhas e PDFs de teste. */
-$marca = $pasta . '/numeracao.txt';
-if (trim((string) @file_get_contents($marca)) !== ZERAR_NUMERACAO) {
-    $arquivo = $pasta . '/arquivo-' . $agora->format('Y-m-d-His');
-    @mkdir($arquivo, 0700, true);
-    foreach (array_merge(glob($pasta . '/*.csv') ?: [], glob($pasta . '/*.pdf') ?: [], glob($pasta . '/falhas-email.log') ?: []) as $f) {
-        @rename($f, $arquivo . '/' . basename($f));
-    }
-    ftruncate($lock, 0); rewind($lock); fwrite($lock, '0'); fflush($lock);
-    @file_put_contents($marca, ZERAR_NUMERACAO);
-}
+aplicarZeramento($pasta, $lock);
 rewind($lock);
 $ultimo = (int) trim((string) stream_get_contents($lock));
 $seq = $ultimo + 1;

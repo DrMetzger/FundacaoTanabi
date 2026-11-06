@@ -203,3 +203,28 @@
   .so-desk { display: none; }
   .so-mobile { display: inline; }
 }
+
+/* CRUD */
+.btn--perigo { background: #b3261e; color: #fff; }
+.icon-btn--perigo { color: #b3261e; }
+.icon-btn--perigo:hover { background: #fdecec; }
+.c-acoes { width: 176px; }
+.dlg__foot--crud { border-top: 0; padding-top: 0; justify-content: flex-start; }
+.ed-sec { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--primary); margin: 6px 0 12px; }
+.ed-sec:not(:first-child) { margin-top: 14px; }
+.ed-grid { display: grid; grid-template-columns: 1fr; column-gap: 12px; }
+@media (min-width: 560px) {
+  .ed-grid { grid-template-columns: repeat(12, 1fr); }
+  .ed-12 { grid-column: span 12; } .ed-8 { grid-column: span 8; } .ed-6 { grid-column: span 6; } .ed-4 { grid-column: span 4; }
+}
+.dlg--lado form { height: 100%; }
+.dlg--confirma { width: min(440px, calc(100vw - 24px)); text-align: center; }
+.dlg--confirma .dlg__body { padding-top: 26px; }
+.dlg--confirma h2 { font-size: 1.4rem; margin-bottom: 8px; }
+.dlg--confirma .dica { justify-content: center; margin-top: 8px; }
+.dlg--confirma .dlg__foot { justify-content: center; }
+.exc-icone { width: 64px; height: 64px; border-radius: 50%; background: #fdecec; color: #b3261e; display: grid; place-items: center; margin: 0 auto 12px; }
+.exc-icone .ms { font-size: 2.2rem; overflow: visible; width: auto; }
+@media (min-width: 900px) { .toolbar { grid-template-columns: 1fr 210px auto; } }
+@media (max-width: 899px) { .toolbar__acoes { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 420px) { .toolbar__acoes .btn { padding: 0 8px; font-size: .9rem; gap: 4px; } }

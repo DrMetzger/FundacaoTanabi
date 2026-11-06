@@ -9,7 +9,7 @@ const EMAIL_SECRETARIA = 'secretariafet@tanabinet.com.br';          // e-mail mo
 const EMAIL_REMETENTE_PADRAO = 'nao-responda@objetivotanabi.com.br'; // usado quando não há SMTP configurado
 const NOME_REMETENTE  = 'Site FET – Concurso de Bolsas';
 const PREFIXO_NUMERO  = '2027-';
-const ZERAR_NUMERACAO = 'oficial-2026-11-06';  // trocar este texto zera a numeração uma vez (testes vão para a pasta arquivo-*)
+const ZERAR_NUMERACAO = 'oficial-2026-11-06-v2';  // trocar este texto zera a numeração uma vez (testes vão para a pasta arquivo-*)
 const WHATSAPP_SECRETARIA = '(17) 98847-0429';
 /* ================================================== */
 
@@ -173,4 +173,86 @@ function lerInscricoes(string $pasta): array
     }
     fclose($fh);
     return $out;
+}
+
+/**
+ * Zera a numeração uma única vez quando ZERAR_NUMERACAO muda: move planilhas e PDFs
+ * para uma pasta arquivo-<data> e volta o contador para 0. Usa a trava do contador.
+ * @param resource|null $lock trava já aberta (inscrição) ou null (abre a própria)
+ */
+function aplicarZeramento(string $pasta, $lock = null): void
+{
+    $marca = $pasta . '/numeracao.txt';
+    if (trim((string) @file_get_contents($marca)) === ZERAR_NUMERACAO) return;
+    $proprio = $lock === null;
+    if ($proprio) {
+        $lock = @fopen($pasta . '/contador.lock', 'c+');
+        if (!$lock || !flock($lock, LOCK_EX)) return;
+        if (trim((string) @file_get_contents($marca)) === ZERAR_NUMERACAO) { flock($lock, LOCK_UN); fclose($lock); return; }
+    }
+    $arquivo = $pasta . '/arquivo-' . date('Y-m-d-His');
+    @mkdir($arquivo, 0700, true);
+    foreach (array_merge(glob($pasta . '/*.csv') ?: [], glob($pasta . '/*.pdf') ?: [], glob($pasta . '/falhas-email.log') ?: []) as $f) {
+        @rename($f, $arquivo . '/' . basename($f));
+    }
+    ftruncate($lock, 0); rewind($lock); fwrite($lock, '0'); fflush($lock);
+    @file_put_contents($marca, ZERAR_NUMERACAO);
+    if ($proprio) { flock($lock, LOCK_UN); fclose($lock); }
+}
+
+/** Ordem oficial das colunas da planilha (rótulo => chave). */
+const CSV_CAMPOS = [
+    'Nº inscrição' => 'numero', 'Data/hora' => 'data', 'Aluno' => 'aluno_nome', 'Nascimento' => 'aluno_nascimento',
+    'CPF aluno' => 'aluno_cpf', 'RG' => 'aluno_rg', 'Escola atual' => 'escola_atual', 'Série 2026' => 'serie_2026',
+    'Série 2027' => 'serie_2027', 'Responsável' => 'resp_nome', 'Vínculo' => 'resp_vinculo', 'CPF responsável' => 'resp_cpf',
+    'WhatsApp' => 'whatsapp', 'Telefone alt.' => 'telefone_alt', 'E-mail responsável' => 'email', 'Outro contato' => 'outro_contato',
+    'Rua e nº' => 'rua', 'Bairro' => 'bairro', 'Cidade/UF' => 'cidade', 'CEP' => 'cep', 'IP' => 'ip', 'E-mail aluno' => 'aluno_email',
+];
+
+function linhaCsv(array $r): array
+{
+    $l = [];
+    foreach (CSV_CAMPOS as $k) {
+        $v = (string) ($r[$k] ?? '');
+        $l[] = preg_match('/^[=+\-@]/', $v) ? "'" . $v : $v;   // evita fórmulas no Excel
+    }
+    return $l;
+}
+
+/** Regrava a planilha inteira (arquivo temporário + rename). Chamar com a trava do contador. */
+function gravarInscricoes(string $pasta, array $linhas): bool
+{
+    $tmp = $pasta . '/inscricoes.tmp';
+    if (!($fh = fopen($tmp, 'w'))) return false;
+    fwrite($fh, "\xEF\xBB\xBF");
+    fputcsv($fh, array_keys(CSV_CAMPOS), ';');
+    foreach ($linhas as $r) fputcsv($fh, linhaCsv($r), ';');
+    fclose($fh);
+    return rename($tmp, $pasta . '/inscricoes.csv');
+}
+
+/** Executa $fn com a trava exclusiva do contador; $fn recebe o handle da trava. */
+function comTrava(string $pasta, callable $fn)
+{
+    $lock = fopen($pasta . '/contador.lock', 'c+');
+    if (!$lock || !flock($lock, LOCK_EX)) return null;
+    try { return $fn($lock); } finally { flock($lock, LOCK_UN); fclose($lock); }
+}
+
+/** Próximo número da inscrição (usar dentro de comTrava). */
+function proximoNumero($lock): string
+{
+    rewind($lock);
+    $seq = (int) trim((string) stream_get_contents($lock)) + 1;
+    ftruncate($lock, 0); rewind($lock); fwrite($lock, (string) $seq); fflush($lock);
+    return PREFIXO_NUMERO . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+}
+
+/** Remove PDFs guardados de uma inscrição (são gerados de novo a partir dos dados). */
+function apagarPdfs(string $pasta, string $numero, string $destino = ''): void
+{
+    foreach (glob($pasta . '/Ficha-Inscricao-' . $numero . '-*.pdf') ?: [] as $f) {
+        if ($destino !== '') { @mkdir($destino, 0700, true); @rename($f, $destino . '/' . basename($f)); }
+        else @unlink($f);
+    }
 }

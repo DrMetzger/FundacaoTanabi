@@ -7,11 +7,12 @@
   const semAcento = (v) => String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const digits = (v) => String(v ?? '').replace(/\D/g, '');
 
-  const dados = JSON.parse($('#dados').textContent || '[]').map((r) => {
+  const prep = (r) => {
     const [d, h] = (r.data || '').split(' ');
     const [dd, mm, aa] = (d || '').split('/');
     return { ...r, data_iso: `${aa}-${mm}-${dd} ${h || ''}`, _busca: semAcento([r.numero, r.aluno_nome, r.aluno_cpf, r.resp_nome, r.resp_cpf, r.escola_atual, r.email, r.aluno_email, r.whatsapp, digits(r.aluno_cpf), digits(r.resp_cpf), digits(r.whatsapp)].join(' ')) };
-  });
+  };
+  const dados = JSON.parse($('#dados').textContent || '[]').map(prep);
 
   const POR_PAG = 25;
   const st = { busca: '', serie: '', ord: 'numero', dir: -1, pag: 1, sel: new Set() };
@@ -47,8 +48,11 @@
   };
 
   /* ---------- Filtro de série ---------- */
-  const series = [...new Set(dados.map((r) => r.serie_2027).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
-  $('#fSerie').insertAdjacentHTML('beforeend', series.map((s) => `<option>${esc(s)}</option>`).join(''));
+  const montarSeries = () => {
+    const series = [...new Set(dados.map((r) => r.serie_2027).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    $('#fSerie').innerHTML = '<option value="">Todas as séries 2027</option>' + series.map((x) => `<option${x === st.serie ? ' selected' : ''}>${esc(x)}</option>`).join('');
+  };
+  montarSeries();
 
   /* ---------- Lista filtrada ---------- */
   const filtrados = () => {
@@ -82,6 +86,8 @@
         <td class="c-acoes"><div class="acoes">
           <a class="icon-btn" href="./?acao=pdf&n=${encodeURIComponent(r.numero)}" target="_blank" rel="noopener" title="Ver PDF" aria-label="Ver PDF da inscrição ${esc(r.numero)}" onclick="event.stopPropagation()"><span class="ms" aria-hidden="true">picture_as_pdf</span></a>
           <button class="icon-btn" type="button" data-ver="${esc(r.numero)}" title="Ver ficha" aria-label="Ver ficha ${esc(r.numero)}"><span class="ms" aria-hidden="true">visibility</span></button>
+          <button class="icon-btn" type="button" data-editar="${esc(r.numero)}" title="Alterar" aria-label="Alterar inscrição ${esc(r.numero)}"><span class="ms" aria-hidden="true">edit</span></button>
+          <button class="icon-btn icon-btn--perigo" type="button" data-excluir="${esc(r.numero)}" title="Excluir" aria-label="Excluir inscrição ${esc(r.numero)}"><span class="ms" aria-hidden="true">delete</span></button>
         </div></td>
       </tr>`).join('');
 
@@ -129,6 +135,10 @@
   });
   $('#selLimpar').addEventListener('click', () => { st.sel.clear(); render(); });
   $('#linhas').addEventListener('click', (e) => {
+    const ed = e.target.closest('[data-editar]');
+    if (ed) { e.stopPropagation(); return abrirEditar(ed.dataset.editar); }
+    const ex = e.target.closest('[data-excluir]');
+    if (ex) { e.stopPropagation(); return abrirExcluir(ex.dataset.excluir); }
     const tr = e.target.closest('tr[data-n]');
     if (tr) abrirFicha(tr.dataset.n);
   });
@@ -219,6 +229,115 @@
     }
   });
 
+
+  /* ---------- CRUD: incluir / alterar / excluir ---------- */
+  const CAMPOS = ['aluno_nome', 'aluno_nascimento', 'aluno_cpf', 'aluno_rg', 'aluno_email', 'escola_atual', 'serie_2026', 'serie_2027',
+    'resp_nome', 'resp_vinculo', 'resp_cpf', 'whatsapp', 'telefone_alt', 'email', 'outro_contato', 'cep', 'rua', 'bairro', 'cidade'];
+  const masks = {
+    cpf: (v) => digits(v).slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'),
+    tel: (v) => {
+      const d = digits(v).slice(0, 11);
+      if (d.length <= 2) return d.length ? `(${d}` : '';
+      if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+      if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+      return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    },
+    cep: (v) => digits(v).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2'),
+    data: (v) => digits(v).slice(0, 8).replace(/(\d{2})(\d)/, '$1/$2').replace(/(\d{2})(\d)/, '$1/$2'),
+  };
+  $$('#formEditar [data-mask]').forEach((el) => el.addEventListener('input', () => { el.value = masks[el.dataset.mask](el.value); }));
+
+  let editando = '';
+  const setSelect = (sel, v) => {
+    if (v && ![...sel.options].some((o) => o.value === v || o.text === v)) sel.insertAdjacentHTML('beforeend', `<option>${esc(v)}</option>`);
+    sel.value = v || '';
+  };
+  const abrirEditar = (n) => {
+    const r = n ? dados.find((x) => x.numero === n) : null;
+    editando = r ? r.numero : '';
+    $('#editSub').textContent = r ? `Inscrição ${r.numero} · ${r.data}` : 'Nova inscrição';
+    $('#editTitulo').textContent = r ? 'Alterar inscrição' : 'Incluir inscrição';
+    CAMPOS.forEach((k) => {
+      const el = $(`#e_${k}`);
+      if (el.tagName === 'SELECT') setSelect(el, r ? r[k] : '');
+      else el.value = r ? (r[k] || '') : (k === 'cidade' ? 'Tanabi/SP' : '');
+      el.closest('.field').classList.remove('is-invalid');
+    });
+    $('#editErro').hidden = true;
+    if ($('#dlgFicha').open) $('#dlgFicha').close();
+    $('#dlgEditar').showModal();
+    $('#e_aluno_nome').focus();
+  };
+  $('#btnNovo').addEventListener('click', () => abrirEditar(''));
+  $('#fichaAlterar').addEventListener('click', () => abrirEditar(fichaAtual.numero));
+
+  $('#formEditar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let falta = false;
+    ['aluno_nome', 'serie_2027', 'resp_nome', 'whatsapp'].forEach((k) => {
+      const el = $(`#e_${k}`);
+      const bad = !el.value.trim();
+      el.closest('.field').classList.toggle('is-invalid', bad);
+      if (bad) falta = true;
+    });
+    if (falta) { $('#editErro').textContent = 'Preencha os campos obrigatórios destacados (*).'; $('#editErro').hidden = false; return; }
+    const fd = new FormData($('#formEditar'));
+    fd.append('csrf', window.CSRF);
+    fd.append('n', editando);
+    const btn = $('#editSalvar');
+    btn.disabled = true; $('.lbl', btn).textContent = 'Salvando…';
+    try {
+      const r = await fetch('./?acao=salvar', { method: 'POST', body: fd, headers: { Accept: 'application/json' } });
+      const j = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida do servidor.' }));
+      if (!j.ok) throw new Error(j.erro || 'Falha ao salvar.');
+      const reg = prep(j.registro);
+      const i = dados.findIndex((x) => x.numero === reg.numero);
+      if (i >= 0) dados[i] = reg; else dados.unshift(reg);
+      $('#dlgEditar').close();
+      montarSeries(); kpis(); render();
+      snack(j.msg);
+    } catch (err) {
+      $('#editErro').textContent = err.message; $('#editErro').hidden = false;
+    } finally {
+      btn.disabled = false; $('.lbl', btn).textContent = 'Salvar';
+    }
+  });
+
+  let excluindo = '';
+  const abrirExcluir = (n) => {
+    const r = dados.find((x) => x.numero === n);
+    if (!r) return;
+    excluindo = n;
+    $('#excTexto').innerHTML = `Tem certeza que deseja excluir a inscrição <strong>${esc(r.numero)}</strong> de <strong>${esc(r.aluno_nome)}</strong>?`;
+    $('#excErro').hidden = true;
+    if ($('#dlgFicha').open) $('#dlgFicha').close();
+    $('#dlgExcluir').showModal();
+  };
+  $('#fichaExcluir').addEventListener('click', () => abrirExcluir(fichaAtual.numero));
+  $('#excConfirmar').addEventListener('click', async () => {
+    const btn = $('#excConfirmar');
+    btn.disabled = true; $('.lbl', btn).textContent = 'Excluindo…';
+    const fd = new FormData();
+    fd.append('csrf', window.CSRF);
+    fd.append('n', excluindo);
+    try {
+      const r = await fetch('./?acao=excluir', { method: 'POST', body: fd, headers: { Accept: 'application/json' } });
+      const j = await r.json().catch(() => ({ ok: false, erro: 'Resposta inválida do servidor.' }));
+      if (!j.ok) throw new Error(j.erro || 'Falha ao excluir.');
+      const i = dados.findIndex((x) => x.numero === excluindo);
+      if (i >= 0) dados.splice(i, 1);
+      st.sel.delete(excluindo);
+      $('#dlgExcluir').close();
+      montarSeries(); kpis(); render();
+      snack(j.msg);
+    } catch (err) {
+      $('#excErro').textContent = err.message; $('#excErro').hidden = false;
+    } finally {
+      btn.disabled = false; $('.lbl', btn).textContent = 'Excluir';
+    }
+  });
+
   kpis();
   render();
 })();
+
