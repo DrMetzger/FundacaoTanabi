@@ -657,3 +657,15 @@ html.hc .topbar { background: #fff; }
 .link-restrito .ms { font-size: 1.05em; color: var(--accent); }
 .footer--slim .link-restrito, .footer__bottom .link-restrito { color: inherit; }
 .link-restrito:hover { text-decoration: underline; }
+
+/* Faixa superior com acesso à área restrita */
+.utilbar { background: var(--primary-700); color: #fff; font-size: .9rem; }
+.utilbar__inner { max-width: 1360px; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
+.utilbar a { color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; }
+.utilbar__tel .ms { color: var(--accent); font-size: 1.1rem; }
+.utilbar__restrito {
+  background: var(--accent); color: var(--on-accent) !important; padding: 5px 14px 5px 10px; border-radius: 999px;
+  min-height: 32px; transition: filter .2s;
+}
+.utilbar__restrito:hover { filter: brightness(1.06); text-decoration: underline; }
+.utilbar__restrito .ms { font-size: 1.1rem; }
