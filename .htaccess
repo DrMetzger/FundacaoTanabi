@@ -14,3 +14,8 @@ Options -Indexes
   ExpiresByType image/webp "access plus 30 days"
   ExpiresByType image/png "access plus 30 days"
 </IfModule>
+
+# Bloqueia acesso direto às configurações
+<Files "config.php">
+  Require all denied
+</Files>

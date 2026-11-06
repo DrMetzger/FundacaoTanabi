@@ -8,11 +8,16 @@ declare(strict_types=1);
 
 /* ================== CONFIGURAÇÃO ================== */
 const EMAIL_DESTINO   = 'secretariafet@tanabinet.com.br';           // quem recebe as inscrições (pode separar vários por vírgula)
-const EMAIL_REMETENTE = 'nao-responda@objetivotanabi.com.br';       // precisa ser do domínio do site
+const EMAIL_REMETENTE_PADRAO = 'nao-responda@objetivotanabi.com.br'; // usado quando não há SMTP configurado
 const NOME_REMETENTE  = 'Site FET – Concurso de Bolsas';
 const PREFIXO_NUMERO  = '2027-';
 const WHATSAPP_SECRETARIA = '(17) 98847-0429';
 /* ================================================== */
+
+/* SMTP: api/config.php é gerado no deploy a partir dos secrets SMTP_USER / SMTP_SENHA do GitHub. */
+$CFG = is_file(__DIR__ . '/config.php') ? (array) (include __DIR__ . '/config.php') : [];
+$CFG += ['smtp_host' => 'ssl://smtp.hostinger.com', 'smtp_port' => 465, 'smtp_user' => '', 'smtp_pass' => ''];
+define('EMAIL_REMETENTE', $CFG['smtp_user'] !== '' ? $CFG['smtp_user'] : EMAIL_REMETENTE_PADRAO);
 
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -196,10 +201,43 @@ $html .= '<p style="margin-top:18px;font-size:14px">✔ Declaração e ciência 
        . '</div></div>';
 $texto .= "\nDeclaração e ciência aceitas pelo responsável legal.\n";
 
+/** Envia via SMTP autenticado (SSL). Retorna true se o servidor aceitou a mensagem. */
+function smtpEnviar(array $cfg, array $destinos, string $mensagem, ?string &$erro = null): bool
+{
+    $erro = null;
+    $sock = @stream_socket_client($cfg['smtp_host'] . ':' . $cfg['smtp_port'], $en, $es, 15);
+    if (!$sock) { $erro = "conexão: $es"; return false; }
+    stream_set_timeout($sock, 20);
+    $ler = function () use ($sock): string {
+        $r = '';
+        while (($l = fgets($sock, 1024)) !== false) { $r .= $l; if (strlen($l) < 4 || $l[3] === ' ') break; }
+        return $r;
+    };
+    $cmd = function (?string $c, array $ok) use ($sock, $ler, &$erro): bool {
+        if ($c !== null) fwrite($sock, $c . "\r\n");
+        $r = $ler();
+        if (!in_array((int) substr($r, 0, 3), $ok, true)) { $erro = trim(($c !== null && str_starts_with($c, 'AUTH') ? 'AUTH' : (string) $c) . ' -> ' . $r); return false; }
+        return true;
+    };
+    $host = $_SERVER['SERVER_NAME'] ?? 'objetivotanabi.com.br';
+    $ok = $cmd(null, [220]) && $cmd("EHLO $host", [250])
+       && $cmd('AUTH LOGIN', [334]) && $cmd(base64_encode($cfg['smtp_user']), [334]) && $cmd(base64_encode($cfg['smtp_pass']), [235])
+       && $cmd('MAIL FROM:<' . $cfg['smtp_user'] . '>', [250]);
+    foreach ($destinos as $d) { $ok = $ok && $cmd('RCPT TO:<' . $d . '>', [250, 251]); }
+    $dados = preg_replace('/^\./m', '..', str_replace(["\r\n", "\r"], "\n", $mensagem));
+    $dados = str_replace("\n", "\r\n", $dados);
+    $ok = $ok && $cmd('DATA', [354]) && $cmd($dados . "\r\n.", [250]);
+    @fwrite($sock, "QUIT\r\n"); fclose($sock);
+    return $ok;
+}
+
 function enviarEmail(string $para, string $assunto, string $html, string $texto, string $replyTo = ''): bool
 {
+    global $CFG, $pasta;
     $limite = 'b' . bin2hex(random_bytes(12));
-    $cab  = 'From: =?UTF-8?B?' . base64_encode(NOME_REMETENTE) . '?= <' . EMAIL_REMETENTE . ">\r\n";
+    $de = '=?UTF-8?B?' . base64_encode(NOME_REMETENTE) . '?= <' . EMAIL_REMETENTE . '>';
+    $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
+    $cab  = "From: $de\r\n";
     if ($replyTo !== '') $cab .= "Reply-To: $replyTo\r\n";
     $cab .= "MIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"$limite\"\r\n";
     $corpo = "--$limite\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
@@ -207,7 +245,15 @@ function enviarEmail(string $para, string $assunto, string $html, string $texto,
            . "--$limite\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
            . chunk_split(base64_encode($html))
            . "--$limite--";
-    $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
+
+    if ($CFG['smtp_user'] !== '' && $CFG['smtp_pass'] !== '') {
+        $destinos = array_filter(array_map('trim', explode(',', $para)));
+        $msg = "Date: " . date('r') . "\r\nTo: $para\r\nSubject: $assuntoCod\r\n"
+             . 'Message-ID: <' . bin2hex(random_bytes(10)) . '@' . substr(strrchr(EMAIL_REMETENTE, '@'), 1) . ">\r\n"
+             . $cab . "\r\n" . $corpo;
+        if (smtpEnviar($CFG, $destinos, $msg, $erro)) return true;
+        @file_put_contents($pasta . '/falhas-email.log', date('c') . " SMTP falhou ($erro); tentando mail()\n", FILE_APPEND);
+    }
     return @mail($para, $assuntoCod, $corpo, $cab, '-f' . EMAIL_REMETENTE);
 }
 

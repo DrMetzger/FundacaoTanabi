@@ -16,6 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Gerar configuração de e-mail (SMTP)
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_SENHA: ${{ secrets.SMTP_SENHA }}
+        run: |
+          php -r 'file_put_contents("api/config.php", "<?php\nreturn " . var_export(["smtp_user" => (string) getenv("SMTP_USER"), "smtp_pass" => (string) getenv("SMTP_SENHA")], true) . ";\n");'
+
       - name: Enviar site para /public_html
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
