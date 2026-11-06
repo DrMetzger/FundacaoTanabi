@@ -84,6 +84,7 @@ $d = [
     'aluno_nascimento' => campo('aluno_nascimento', 10),
     'aluno_cpf'        => campo('aluno_cpf', 14),
     'aluno_rg'         => campo('aluno_rg', 20),
+    'aluno_email'      => campo('aluno_email', 120),
     'escola_atual'     => campo('escola_atual', 120),
     'serie_2026'       => campo('serie_2026', 60),
     'serie_2027'       => campo('serie_2027', 60),
@@ -111,7 +112,8 @@ if (!cpfValido($d['aluno_cpf'])) responder(false, ['erro' => 'CPF do aluno invá
 if (!cpfValido($d['resp_cpf'])) responder(false, ['erro' => 'CPF do responsável inválido.'], 422);
 if (strlen(soDigitos($d['whatsapp'])) < 10) responder(false, ['erro' => 'WhatsApp inválido.'], 422);
 if (strlen(soDigitos($d['cep'])) !== 8) responder(false, ['erro' => 'CEP inválido.'], 422);
-if ($d['email'] !== '' && !filter_var($d['email'], FILTER_VALIDATE_EMAIL)) responder(false, ['erro' => 'E-mail inválido.'], 422);
+if ($d['email'] !== '' && !filter_var($d['email'], FILTER_VALIDATE_EMAIL)) responder(false, ['erro' => 'E-mail do responsável inválido.'], 422);
+if ($d['aluno_email'] !== '' && !filter_var($d['aluno_email'], FILTER_VALIDATE_EMAIL)) responder(false, ['erro' => 'E-mail do aluno inválido.'], 422);
 $nasc = DateTime::createFromFormat('!Y-m-d', $d['aluno_nascimento']);
 if (!$nasc) responder(false, ['erro' => 'Data de nascimento inválida.'], 422);
 $d['aluno_nascimento'] = $nasc->format('d/m/Y');
@@ -135,8 +137,8 @@ $pasta = pastaDados();
 date_default_timezone_set('America/Sao_Paulo');
 $agora = new DateTime();
 $colunas = ['Nº inscrição', 'Data/hora', 'Aluno', 'Nascimento', 'CPF aluno', 'RG', 'Escola atual', 'Série 2026', 'Série 2027',
-            'Responsável', 'Vínculo', 'CPF responsável', 'WhatsApp', 'Telefone alt.', 'E-mail', 'Outro contato',
-            'Rua e nº', 'Bairro', 'Cidade/UF', 'CEP', 'IP'];
+            'Responsável', 'Vínculo', 'CPF responsável', 'WhatsApp', 'Telefone alt.', 'E-mail responsável', 'Outro contato',
+            'Rua e nº', 'Bairro', 'Cidade/UF', 'CEP', 'IP', 'E-mail aluno'];
 
 $lock = fopen($pasta . '/contador.lock', 'c+');
 if (!$lock || !flock($lock, LOCK_EX)) responder(false, ['erro' => 'Servidor ocupado. Tente novamente.'], 503);
@@ -146,13 +148,18 @@ ftruncate($lock, 0); rewind($lock); fwrite($lock, (string) $seq); fflush($lock);
 $numero = PREFIXO_NUMERO . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
 
 $csv = $pasta . '/inscricoes.csv';
+// se o cabeçalho mudou (nova coluna), arquiva a planilha antiga e começa uma nova
+if (is_file($csv) && ($fh0 = fopen($csv, 'r'))) {
+    $cab0 = (string) fgets($fh0); fclose($fh0);
+    if (!str_contains($cab0, 'E-mail aluno')) @rename($csv, $pasta . '/inscricoes-ate-' . $agora->format('Y-m-d-His') . '.csv');
+}
 $novo = !is_file($csv);
 if ($fh = fopen($csv, 'a')) {
     if ($novo) { fwrite($fh, "\xEF\xBB\xBF"); fputcsv($fh, $colunas, ';'); }
     $linha = [$numero, $agora->format('d/m/Y H:i:s'), $d['aluno_nome'], $d['aluno_nascimento'], $d['aluno_cpf'], $d['aluno_rg'],
               $d['escola_atual'], $d['serie_2026'], $d['serie_2027'], $d['resp_nome'], $d['resp_vinculo'], $d['resp_cpf'],
               $d['whatsapp'], $d['telefone_alt'], $d['email'], $d['outro_contato'], $d['rua'], $d['bairro'], $d['cidade'],
-              $d['cep'], $_SERVER['REMOTE_ADDR'] ?? ''];
+              $d['cep'], $_SERVER['REMOTE_ADDR'] ?? '', $d['aluno_email']];
     // evita fórmulas ao abrir no Excel
     $linha = array_map(fn($v) => preg_match('/^[=+\-@]/', (string) $v) ? "'" . $v : $v, $linha);
     fputcsv($fh, $linha, ';');
@@ -166,13 +173,13 @@ require_once __DIR__ . '/lib/ficha.php';
 $secoes = [
     '1. Dados do(a) aluno(a)' => [
         'Nome completo' => $d['aluno_nome'], 'Data de nascimento' => $d['aluno_nascimento'], 'CPF' => $d['aluno_cpf'],
-        'RG' => $d['aluno_rg'], 'Escola atual' => $d['escola_atual'],
+        'RG' => $d['aluno_rg'], 'E-mail do(a) aluno(a)' => $d['aluno_email'], 'Escola atual' => $d['escola_atual'],
         'Ano/série cursado em 2026' => $d['serie_2026'], 'Ano/série pretendido em 2027' => $d['serie_2027'],
     ],
     '2. Responsável legal e contatos' => [
         'Responsável legal' => $d['resp_nome'], 'Vínculo com o aluno' => $d['resp_vinculo'], 'CPF' => $d['resp_cpf'],
         'WhatsApp principal' => $d['whatsapp'], 'Telefone alternativo' => $d['telefone_alt'],
-        'E-mail' => $d['email'], 'Outro contato / responsável' => $d['outro_contato'],
+        'E-mail do responsável' => $d['email'], 'Outro contato / responsável' => $d['outro_contato'],
     ],
     '3. Endereço' => [
         'Rua / avenida e número' => $d['rua'], 'Bairro' => $d['bairro'], 'Cidade/UF' => $d['cidade'], 'CEP' => $d['cep'],
@@ -287,17 +294,18 @@ $enviado = enviarEmail(
         'Uma nova ficha de inscrição foi enviada pelo site. Os dados completos estão abaixo e também no <strong>PDF anexo</strong>.',
         $numero, $agora, $secoes, $aceite, 'Chamar responsável no WhatsApp', "https://wa.me/55$wa", $contatoEquipe),
     fichaEmailTexto('Nova inscrição recebida pelo site.', $numero, $agora, $secoes, $aceite),
-    $d['email'],
+    $d['email'] !== '' ? $d['email'] : $d['aluno_email'],
     [$anexo]
 );
 if (!$enviado) {
     @file_put_contents($pasta . '/falhas-email.log', $agora->format('c') . " falha ao enviar $numero\n", FILE_APPEND);
 }
 
-/* ---------- 2) Confirmação para o responsável (só se o e-mail dele não for da equipe) ---------- */
-if ($d['email'] !== '' && !in_array(strtolower($d['email']), $internos, true)) {
+/* ---------- 2) Confirmação para responsável e aluno (exceto e-mails da equipe, sem duplicar) ---------- */
+$familia = array_values(array_diff(listaEmails($d['email'], $d['aluno_email']), $internos));
+if ($familia) {
     enviarEmail(
-        [$d['email']], [],
+        $familia, [],
         "Inscrição $numero confirmada – Concurso de Bolsas 2027 – FET",
         fichaEmailHtml('Inscrição recebida!',
             'Olá, <strong>' . $h($d['resp_nome']) . '</strong>. Recebemos a inscrição de <strong>' . $h($d['aluno_nome'])

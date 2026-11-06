@@ -77,10 +77,12 @@
       if (!bad && el.dataset.mask === 'cep' && digits(el.value).length !== 8) { bad = true; erros.push('CEP incompleto.'); }
       setInvalid(el, bad);
     });
-    const email = $('#email');
-    const emailBad = email.value.trim() !== '' && !email.checkValidity();
-    setInvalid(email, emailBad);
-    if (emailBad) erros.push('E-mail inválido.');
+    for (const [id, nome] of [['#aluno_email', 'E-mail do aluno inválido.'], ['#email', 'E-mail do responsável inválido.']]) {
+      const email = $(id);
+      const emailBad = email.value.trim() !== '' && !email.checkValidity();
+      setInvalid(email, emailBad);
+      if (emailBad) erros.push(nome);
+    }
     const qtd = $$('[aria-invalid="true"]', form).length;
     if (qtd && !erros.length) erros.push('Preencha os campos obrigatórios destacados.');
     return erros;
@@ -110,7 +112,7 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível enviar agora.');
       $('#sucessoNum').textContent = j.numero;
-      const mail = $('#email').value.trim();
+      const mail = [...new Set([$('#email').value.trim(), $('#aluno_email').value.trim()].filter(Boolean))].join(' e ');
       if (mail) {
         $('#sucessoMsg').textContent = `Enviamos a confirmação com a ficha em PDF para ${mail}. Se não encontrar, confira a caixa de spam. A secretaria entrará em contato pelo WhatsApp informado.`;
       }

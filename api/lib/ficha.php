@@ -43,8 +43,8 @@ function fichaPdf(string $numero, DateTimeInterface $quando, array $secoes, stri
 
     $pag = 1;
     $cabecalho();
-    $y = 144;
-    $limite = PdfSimples::H - 70;
+    $y = 140;
+    $limite = PdfSimples::H - 56;
     $garantir = function (float $altura) use (&$y, &$pag, $limite, $pdf, $cabecalho, $rodape) {
         if ($y + $altura > $limite) {
             $rodape($pag);
@@ -58,19 +58,19 @@ function fichaPdf(string $numero, DateTimeInterface $quando, array $secoes, stri
     $colRot = 190;
     foreach ($secoes as $titulo => $itens) {
         $garantir(60);
-        $pdf->retangulo($mx, $y, $larg, 24, '#e9eef8');
-        $pdf->retangulo($mx, $y, 4, 24, '#0b3d91');
-        $pdf->texto($mx + 14, $y + 16, mb_strtoupper($titulo), 10.5, true, '#0b3d91');
-        $y += 30;
+        $pdf->retangulo($mx, $y, $larg, 22, '#e9eef8');
+        $pdf->retangulo($mx, $y, 4, 22, '#0b3d91');
+        $pdf->texto($mx + 14, $y + 15, mb_strtoupper($titulo), 10.5, true, '#0b3d91');
+        $y += 27;
         $i = 0;
         foreach ($itens as $rot => $val) {
             $val = $val === '' ? '—' : $val;
             $linhas = $pdf->quebrar($val, 10.5, $larg - $colRot - 16, true);
-            $alt = max(19, 6 + 13 * count($linhas));
+            $alt = max(18, 5 + 13 * count($linhas));
             $garantir($alt);
             if ($i++ % 2 === 1) $pdf->retangulo($mx, $y, $larg, $alt, '#f7f9fd');
-            $pdf->texto($mx + 12, $y + 13, $rot, 9.5, false, '#4a5468');
-            foreach ($linhas as $k => $l) $pdf->texto($mx + $colRot, $y + 13 + 13 * $k, $l, 10.5, true, '#172033');
+            $pdf->texto($mx + 12, $y + 12.5, $rot, 9.5, false, '#4a5468');
+            foreach ($linhas as $k => $l) $pdf->texto($mx + $colRot, $y + 12.5 + 13 * $k, $l, 10.5, true, '#172033');
             $pdf->linha($mx, $y + $alt, $mx + $larg, $y + $alt, '#e3e8f2');
             $y += $alt;
         }
