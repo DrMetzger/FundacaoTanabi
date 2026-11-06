@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Concurso de Bolsas 2027 | Fundação Educacional de Tanabi</title>
+  <meta name="description" content="Ficha de inscrição on-line do Concurso de Bolsas 2027 da Fundação Educacional de Tanabi – Objetivo.">
+  <meta name="theme-color" content="#0b3d91">
+  <link rel="icon" type="image/png" href="assets/img/favicon.png">
+  <meta property="og:title" content="Concurso de Bolsas 2027 – Fundação Educacional de Tanabi">
+  <meta property="og:description" content="Inscreva-se on-line no Concurso de Bolsas 2027.">
+  <meta property="og:image" content="assets/img/banner.webp">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0&display=block" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="page-bolsas">
+  <a class="skip-link" href="#ficha">Pular para a ficha</a>
+
+  <header class="topbar" id="topo">
+    <div class="container topbar__inner">
+      <a class="brand" href="index.html" aria-label="Fundação Educacional de Tanabi – página inicial">
+        <img src="assets/img/emblema.png" alt="" width="44" height="45">
+        <span class="brand__text">
+          <strong>Fundação Educacional</strong>
+          <span>de Tanabi · Objetivo</span>
+        </span>
+      </a>
+      <div class="topbar__actions">
+        <a class="btn btn--outlined btn--sm" href="index.html"><span class="ms" aria-hidden="true">arrow_back</span> <span class="hide-xs">Voltar ao site</span></a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero hero--compact">
+      <div class="container">
+        <span class="pill"><span class="ms" aria-hidden="true">workspace_premium</span> Inscrições abertas</span>
+        <h1 class="page-title">Concurso de Bolsas <span>2027</span></h1>
+        <p class="hero__lead">Preencha a ficha de inscrição abaixo. Ela chega direto na secretaria da Fundação, e você recebe o número da sua inscrição na hora.</p>
+      </div>
+      <svg class="clouds" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+        <path fill="#f4b400" d="M0 70 Q60 20 130 55 Q180 10 250 50 Q320 15 380 60 Q470 30 540 65 Q620 25 700 62 Q780 22 860 60 Q940 25 1010 58 Q1090 18 1170 55 Q1250 20 1320 56 Q1390 28 1440 50 V120 H0Z"/>
+        <path fill="var(--surface-tint)" d="M0 86 Q60 40 130 72 Q180 30 250 68 Q320 34 380 78 Q470 48 540 82 Q620 44 700 80 Q780 42 860 78 Q940 44 1010 76 Q1090 38 1170 72 Q1250 40 1320 74 Q1390 46 1440 68 V120 H0Z"/>
+      </svg>
+    </section>
+
+    <section class="bolsas">
+      <div class="container bolsas__container">
+
+        <form class="ficha" id="ficha" action="api/inscricao.php" method="post" novalidate>
+          <!-- anti-spam -->
+          <div class="hp" aria-hidden="true">
+            <label for="website">Não preencha</label>
+            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+          </div>
+          <input type="hidden" name="t0" id="t0" value="">
+
+          <!-- 1. Aluno -->
+          <fieldset class="ficha__card">
+            <legend><span class="ficha__num">1</span> Dados do(a) aluno(a)</legend>
+            <div class="grid">
+              <div class="field col-12">
+                <input id="aluno_nome" name="aluno_nome" type="text" placeholder=" " autocomplete="off" required maxlength="120">
+                <label for="aluno_nome">Nome completo do(a) aluno(a) *</label>
+              </div>
+              <div class="field col-4">
+                <input id="aluno_nascimento" name="aluno_nascimento" type="date" placeholder=" " required min="2005-01-01" max="2025-12-31">
+                <label for="aluno_nascimento">Data de nascimento *</label>
+              </div>
+              <div class="field col-4">
+                <input id="aluno_cpf" name="aluno_cpf" type="text" inputmode="numeric" placeholder=" " data-mask="cpf" maxlength="14" required>
+                <label for="aluno_cpf">CPF do(a) aluno(a) *</label>
+              </div>
+              <div class="field col-4">
+                <input id="aluno_rg" name="aluno_rg" type="text" placeholder=" " maxlength="20">
+                <label for="aluno_rg">RG (se houver)</label>
+              </div>
+              <div class="field col-12">
+                <input id="escola_atual" name="escola_atual" type="text" placeholder=" " required maxlength="120">
+                <label for="escola_atual">Escola atual *</label>
+              </div>
+              <div class="field col-6">
+                <select id="serie_2026" name="serie_2026" required>
+                  <option value="" selected disabled></option>
+                  <optgroup label="Educação Infantil">
+                    <option>Educação Infantil</option>
+                  </optgroup>
+                  <optgroup label="Ensino Fundamental">
+                    <option>1º ano – Fundamental</option><option>2º ano – Fundamental</option><option>3º ano – Fundamental</option>
+                    <option>4º ano – Fundamental</option><option>5º ano – Fundamental</option><option>6º ano – Fundamental</option>
+                    <option>7º ano – Fundamental</option><option>8º ano – Fundamental</option><option>9º ano – Fundamental</option>
+                  </optgroup>
+                  <optgroup label="Ensino Médio">
+                    <option>1ª série – Médio</option><option>2ª série – Médio</option><option>3ª série – Médio</option>
+                  </optgroup>
+                </select>
+                <label for="serie_2026">Ano/série cursado em 2026 *</label>
+              </div>
+              <div class="field col-6">
+                <select id="serie_2027" name="serie_2027" required>
+                  <option value="" selected disabled></option>
+                  <optgroup label="Ensino Fundamental">
+                    <option>1º ano – Fundamental</option><option>2º ano – Fundamental</option><option>3º ano – Fundamental</option>
+                    <option>4º ano – Fundamental</option><option>5º ano – Fundamental</option><option>6º ano – Fundamental</option>
+                    <option>7º ano – Fundamental</option><option>8º ano – Fundamental</option><option>9º ano – Fundamental</option>
+                  </optgroup>
+                  <optgroup label="Ensino Médio">
+                    <option>1ª série – Médio</option><option>2ª série – Médio</option><option>3ª série – Médio</option>
+                  </optgroup>
+                </select>
+                <label for="serie_2027">Ano/série pretendido em 2027 *</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 2. Responsável -->
+          <fieldset class="ficha__card">
+            <legend><span class="ficha__num">2</span> Responsável legal e contatos</legend>
+            <div class="grid">
+              <div class="field col-12">
+                <input id="resp_nome" name="resp_nome" type="text" placeholder=" " autocomplete="name" required maxlength="120">
+                <label for="resp_nome">Nome do(a) responsável legal *</label>
+              </div>
+              <div class="field col-6">
+                <select id="resp_vinculo" name="resp_vinculo" required>
+                  <option value="" selected disabled></option>
+                  <option>Mãe</option><option>Pai</option><option>Avó / Avô</option><option>Tia / Tio</option><option>Tutor(a) legal</option><option>Outro</option>
+                </select>
+                <label for="resp_vinculo">Vínculo com o aluno *</label>
+              </div>
+              <div class="field col-6">
+                <input id="resp_cpf" name="resp_cpf" type="text" inputmode="numeric" placeholder=" " data-mask="cpf" maxlength="14" required>
+                <label for="resp_cpf">CPF do(a) responsável *</label>
+              </div>
+              <div class="field col-6">
+                <input id="whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder=" " data-mask="tel" maxlength="15" autocomplete="tel" required>
+                <label for="whatsapp">WhatsApp principal *</label>
+              </div>
+              <div class="field col-6">
+                <input id="telefone_alt" name="telefone_alt" type="tel" inputmode="tel" placeholder=" " data-mask="tel" maxlength="15">
+                <label for="telefone_alt">Telefone alternativo</label>
+              </div>
+              <div class="field col-12">
+                <input id="email" name="email" type="email" inputmode="email" placeholder=" " autocomplete="email" maxlength="120">
+                <label for="email">E-mail (opcional — enviamos a confirmação)</label>
+              </div>
+              <div class="field col-12">
+                <input id="outro_contato" name="outro_contato" type="text" placeholder=" " maxlength="160">
+                <label for="outro_contato">Outro contato / responsável (opcional)</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 3. Endereço -->
+          <fieldset class="ficha__card">
+            <legend><span class="ficha__num">3</span> Endereço</legend>
+            <div class="grid">
+              <div class="field col-4">
+                <input id="cep" name="cep" type="text" inputmode="numeric" placeholder=" " data-mask="cep" maxlength="9" autocomplete="postal-code" required>
+                <label for="cep">CEP *</label>
+                <span class="field__hint" id="cepHint">Preenchemos o endereço para você.</span>
+              </div>
+              <div class="field col-8">
+                <input id="rua" name="rua" type="text" placeholder=" " autocomplete="address-line1" required maxlength="160">
+                <label for="rua">Rua / avenida e número *</label>
+              </div>
+              <div class="field col-6">
+                <input id="bairro" name="bairro" type="text" placeholder=" " required maxlength="80">
+                <label for="bairro">Bairro *</label>
+              </div>
+              <div class="field col-6">
+                <input id="cidade" name="cidade" type="text" placeholder=" " value="Tanabi/SP" required maxlength="80">
+                <label for="cidade">Cidade/UF *</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 4. Declaração -->
+          <fieldset class="ficha__card">
+            <legend><span class="ficha__num">4</span> Declaração e ciência</legend>
+            <p class="ficha__decl">Declaro que as informações prestadas são verdadeiras e que estou ciente de que a inscrição não garante a concessão de bolsa, a qual dependerá dos critérios previstos no regulamento do concurso. Estou ciente de que os dados informados serão utilizados pela Fundação Educacional de Tanabi para inscrição, organização da prova e comunicação sobre o processo seletivo.</p>
+            <label class="check">
+              <input type="checkbox" name="declaracao" id="declaracao" value="sim" required>
+              <span class="check__box" aria-hidden="true"><span class="ms">check</span></span>
+              <span>Li e concordo com a declaração acima, como responsável legal pelo(a) aluno(a). *</span>
+            </label>
+            <p class="ficha__info"><span class="ms" aria-hidden="true">info</span> Informações sobre data, horário, local da prova e critérios de seleção serão divulgadas pela Fundação.</p>
+          </fieldset>
+
+          <p class="form__error" id="fichaError" role="alert" hidden></p>
+          <button class="btn btn--accent btn--lg btn--block" type="submit" id="fichaSubmit">
+            <span class="ms" aria-hidden="true">send</span> <span class="lbl">Enviar inscrição</span>
+          </button>
+          <p class="ficha__req">* Campos obrigatórios</p>
+        </form>
+
+        <!-- Sucesso -->
+        <div class="sucesso" id="sucesso" hidden tabindex="-1">
+          <div class="sucesso__icon"><span class="ms" aria-hidden="true">task_alt</span></div>
+          <h2>Inscrição enviada!</h2>
+          <p>Guarde o número da sua inscrição:</p>
+          <p class="sucesso__num" id="sucessoNum">—</p>
+          <p id="sucessoMsg">A secretaria da Fundação recebeu os seus dados e entrará em contato pelo WhatsApp informado.</p>
+          <div class="sucesso__actions">
+            <a class="btn btn--whats" id="sucessoWhats" href="https://wa.me/5517988470429" target="_blank" rel="noopener"><span class="ms" aria-hidden="true">chat</span> Falar com a secretaria</a>
+            <a class="btn btn--outlined" href="index.html"><span class="ms" aria-hidden="true">home</span> Voltar ao site</a>
+          </div>
+        </div>
+
+        <aside class="bolsas__aside">
+          <div class="aside-card">
+            <h3><span class="ms" aria-hidden="true">help</span> Dúvidas?</h3>
+            <p>Fale com a secretaria:</p>
+            <p><a href="https://wa.me/5517988470429" target="_blank" rel="noopener">(17) 98847-0429</a> · WhatsApp<br>
+               <a href="mailto:secretariafet@tanabinet.com.br">secretariafet@tanabinet.com.br</a></p>
+            <p class="muted">Rua José Siriani, 927 – Centro – Tanabi/SP</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer footer--slim">
+    <div class="footer__bottom">
+      <p>© <span id="ano">2026</span> Fundação Educacional de Tanabi · CNPJ 53.222.485/0001-24</p>
+    </div>
+  </footer>
+
+  <script src="assets/js/bolsas.js" defer></script>
+</body>
+</html>
