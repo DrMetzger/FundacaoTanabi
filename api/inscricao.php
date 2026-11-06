@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 /* ================== CONFIGURAÇÃO ================== */
 const EMAIL_DESTINO   = 'pcorreajr@primeerp.com.br';                // quem recebe as inscrições (pode separar vários por vírgula)
+const EMAIL_COPIA     = 'secretariafet@tanabinet.com.br';           // recebe cópia (Cc) de cada inscrição
 const EMAIL_SECRETARIA = 'secretariafet@tanabinet.com.br';          // e-mail mostrado às famílias na confirmação
 const EMAIL_REMETENTE_PADRAO = 'nao-responda@objetivotanabi.com.br'; // usado quando não há SMTP configurado
 const NOME_REMETENTE  = 'Site FET – Concurso de Bolsas';
@@ -159,48 +160,31 @@ if ($fh = fopen($csv, 'a')) {
 }
 flock($lock, LOCK_UN); fclose($lock);
 
-/* ---------- E-mail para a secretaria ---------- */
-$h = fn(string $v): string => htmlspecialchars($v === '' ? '—' : $v, ENT_QUOTES, 'UTF-8');
+/* ---------- Conteúdo da ficha ---------- */
+require_once __DIR__ . '/lib/ficha.php';
+
 $secoes = [
     '1. Dados do(a) aluno(a)' => [
-        'Nome completo' => $d['aluno_nome'], 'Nascimento' => $d['aluno_nascimento'], 'CPF' => $d['aluno_cpf'],
+        'Nome completo' => $d['aluno_nome'], 'Data de nascimento' => $d['aluno_nascimento'], 'CPF' => $d['aluno_cpf'],
         'RG' => $d['aluno_rg'], 'Escola atual' => $d['escola_atual'],
         'Ano/série cursado em 2026' => $d['serie_2026'], 'Ano/série pretendido em 2027' => $d['serie_2027'],
     ],
     '2. Responsável legal e contatos' => [
-        'Responsável legal' => $d['resp_nome'], 'Vínculo' => $d['resp_vinculo'], 'CPF' => $d['resp_cpf'],
+        'Responsável legal' => $d['resp_nome'], 'Vínculo com o aluno' => $d['resp_vinculo'], 'CPF' => $d['resp_cpf'],
         'WhatsApp principal' => $d['whatsapp'], 'Telefone alternativo' => $d['telefone_alt'],
-        'E-mail' => $d['email'], 'Outro contato' => $d['outro_contato'],
+        'E-mail' => $d['email'], 'Outro contato / responsável' => $d['outro_contato'],
     ],
     '3. Endereço' => [
-        'Rua/avenida e nº' => $d['rua'], 'Bairro' => $d['bairro'], 'Cidade/UF' => $d['cidade'], 'CEP' => $d['cep'],
+        'Rua / avenida e número' => $d['rua'], 'Bairro' => $d['bairro'], 'Cidade/UF' => $d['cidade'], 'CEP' => $d['cep'],
     ],
 ];
+$aceite = 'Declaração e ciência aceitas eletronicamente pelo(a) responsável legal ' . $d['resp_nome']
+        . ' em ' . $agora->format('d/m/Y \à\s H:i') . ' (IP ' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ').';
 
-$html = '<div style="font-family:Arial,sans-serif;max-width:640px;color:#172033">'
-      . '<div style="background:#0b3d91;color:#fff;padding:18px 22px;border-radius:10px 10px 0 0">'
-      . '<div style="font-size:13px;opacity:.85">FUNDAÇÃO EDUCACIONAL DE TANABI</div>'
-      . '<div style="font-size:20px;font-weight:bold">Concurso de Bolsas 2027 – Ficha de inscrição</div></div>'
-      . '<div style="background:#f4b400;padding:10px 22px;font-weight:bold">Nº da inscrição: ' . $h($numero)
-      . ' &nbsp;·&nbsp; Data: ' . $agora->format('d/m/Y H:i') . '</div>'
-      . '<div style="border:1px solid #dde3ee;border-top:0;padding:8px 22px 18px;border-radius:0 0 10px 10px">';
-$texto = "CONCURSO DE BOLSAS 2027 - FICHA DE INSCRIÇÃO\nNº da inscrição: $numero\nData: " . $agora->format('d/m/Y H:i') . "\n";
-foreach ($secoes as $titulo => $itens) {
-    $html .= '<h3 style="color:#0b3d91;margin:18px 0 8px;font-size:15px">' . $h($titulo) . '</h3>'
-           . '<table style="width:100%;border-collapse:collapse;font-size:14px">';
-    $texto .= "\n$titulo\n";
-    foreach ($itens as $rot => $val) {
-        $html .= '<tr><td style="padding:6px 8px;border-bottom:1px solid #eef1f6;color:#4a5468;width:42%">' . $h($rot)
-               . '</td><td style="padding:6px 8px;border-bottom:1px solid #eef1f6;font-weight:bold">' . $h($val) . '</td></tr>';
-        $texto .= "  $rot: " . ($val === '' ? '—' : $val) . "\n";
-    }
-    $html .= '</table>';
-}
-$wa = soDigitos($d['whatsapp']);
-$html .= '<p style="margin-top:18px;font-size:14px">✔ Declaração e ciência aceitas pelo responsável legal.</p>'
-       . '<p><a href="https://wa.me/55' . $wa . '" style="background:#1fa855;color:#fff;padding:10px 16px;border-radius:20px;text-decoration:none;font-weight:bold">Chamar responsável no WhatsApp</a></p>'
-       . '</div></div>';
-$texto .= "\nDeclaração e ciência aceitas pelo responsável legal.\n";
+$pdfConteudo = fichaPdf($numero, $agora, $secoes, $aceite);
+$slug = preg_replace('/[^a-z0-9]+/', '-', strtolower((string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $d['aluno_nome']))) ?? 'aluno';
+$anexo = ['nome' => 'Ficha-Inscricao-' . $numero . '-' . trim($slug, '-') . '.pdf', 'tipo' => 'application/pdf', 'dados' => $pdfConteudo];
+@file_put_contents($pasta . '/' . $anexo['nome'], $pdfConteudo);   // cópia do PDF no servidor
 
 /** Envia via SMTP autenticado (SSL). Retorna true se o servidor aceitou a mensagem. */
 function smtpEnviar(array $cfg, array $destinos, string $mensagem, ?string &$erro = null): bool
@@ -208,7 +192,7 @@ function smtpEnviar(array $cfg, array $destinos, string $mensagem, ?string &$err
     $erro = null;
     $sock = @stream_socket_client($cfg['smtp_host'] . ':' . $cfg['smtp_port'], $en, $es, 15);
     if (!$sock) { $erro = "conexão: $es"; return false; }
-    stream_set_timeout($sock, 20);
+    stream_set_timeout($sock, 30);
     $ler = function () use ($sock): string {
         $r = '';
         while (($l = fgets($sock, 1024)) !== false) { $r .= $l; if (strlen($l) < 4 || $l[3] === ' ') break; }
@@ -217,7 +201,10 @@ function smtpEnviar(array $cfg, array $destinos, string $mensagem, ?string &$err
     $cmd = function (?string $c, array $ok) use ($sock, $ler, &$erro): bool {
         if ($c !== null) fwrite($sock, $c . "\r\n");
         $r = $ler();
-        if (!in_array((int) substr($r, 0, 3), $ok, true)) { $erro = trim(($c !== null && str_starts_with($c, 'AUTH') ? 'AUTH' : (string) $c) . ' -> ' . $r); return false; }
+        if (!in_array((int) substr($r, 0, 3), $ok, true)) {
+            $erro = trim(($c !== null && (str_starts_with($c, 'AUTH') || strlen($c) > 200) ? substr($c, 0, 10) . '…' : (string) $c) . ' -> ' . $r);
+            return false;
+        }
         return true;
     };
     $host = $_SERVER['SERVER_NAME'] ?? 'objetivotanabi.com.br';
@@ -232,55 +219,94 @@ function smtpEnviar(array $cfg, array $destinos, string $mensagem, ?string &$err
     return $ok;
 }
 
-function enviarEmail(string $para, string $assunto, string $html, string $texto, string $replyTo = ''): bool
+/** Lista de e-mails separados por vírgula → array limpo, sem repetição. */
+function listaEmails(string ...$listas): array
 {
-    global $CFG, $pasta;
-    $limite = 'b' . bin2hex(random_bytes(12));
-    $de = '=?UTF-8?B?' . base64_encode(NOME_REMETENTE) . '?= <' . EMAIL_REMETENTE . '>';
-    $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
-    $cab  = "From: $de\r\n";
-    if ($replyTo !== '') $cab .= "Reply-To: $replyTo\r\n";
-    $cab .= "MIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"$limite\"\r\n";
-    $corpo = "--$limite\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
-           . chunk_split(base64_encode($texto))
-           . "--$limite\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
-           . chunk_split(base64_encode($html))
-           . "--$limite--";
-
-    if ($CFG['smtp_user'] !== '' && $CFG['smtp_pass'] !== '') {
-        $destinos = array_filter(array_map('trim', explode(',', $para)));
-        $msg = "Date: " . date('r') . "\r\nTo: $para\r\nSubject: $assuntoCod\r\n"
-             . 'Message-ID: <' . bin2hex(random_bytes(10)) . '@' . substr(strrchr(EMAIL_REMETENTE, '@'), 1) . ">\r\n"
-             . $cab . "\r\n" . $corpo;
-        if (smtpEnviar($CFG, $destinos, $msg, $erro)) return true;
-        @file_put_contents($pasta . '/falhas-email.log', date('c') . " SMTP falhou ($erro); tentando mail()\n", FILE_APPEND);
+    $out = [];
+    foreach ($listas as $l) foreach (explode(',', $l) as $e) {
+        $e = strtolower(trim($e));
+        if ($e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL) && !in_array($e, $out, true)) $out[] = $e;
     }
-    return @mail($para, $assuntoCod, $corpo, $cab, '-f' . EMAIL_REMETENTE);
+    return $out;
 }
 
-$enviado = enviarEmail(
-    EMAIL_DESTINO,
-    "[Concurso de Bolsas 2027] Inscrição $numero – {$d['aluno_nome']}",
-    $html, $texto,
-    $d['email'] !== '' ? $d['email'] : ''
-);
+function enviarEmail(array $para, array $cc, string $assunto, string $html, string $texto, string $replyTo = '', array $anexos = []): bool
+{
+    global $CFG, $pasta;
+    $cc = array_values(array_diff($cc, $para));
+    $alt = 'a' . bin2hex(random_bytes(10));
+    $mix = 'm' . bin2hex(random_bytes(10));
+    $de = '=?UTF-8?B?' . base64_encode(NOME_REMETENTE) . '?= <' . EMAIL_REMETENTE . '>';
+    $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
 
+    $cab = "From: $de\r\n";
+    if ($cc) $cab .= 'Cc: ' . implode(', ', $cc) . "\r\n";
+    if ($replyTo !== '') $cab .= "Reply-To: $replyTo\r\n";
+    $cab .= "MIME-Version: 1.0\r\n";
+
+    $alternativo = "--$alt\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+                 . chunk_split(base64_encode($texto))
+                 . "--$alt\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+                 . chunk_split(base64_encode($html))
+                 . "--$alt--\r\n";
+    if ($anexos) {
+        $cab .= "Content-Type: multipart/mixed; boundary=\"$mix\"\r\n";
+        $corpo = "--$mix\r\nContent-Type: multipart/alternative; boundary=\"$alt\"\r\n\r\n" . $alternativo;
+        foreach ($anexos as $a) {
+            $corpo .= "--$mix\r\nContent-Type: {$a['tipo']}; name=\"{$a['nome']}\"\r\nContent-Transfer-Encoding: base64\r\n"
+                    . "Content-Disposition: attachment; filename=\"{$a['nome']}\"\r\n\r\n" . chunk_split(base64_encode($a['dados']));
+        }
+        $corpo .= "--$mix--";
+    } else {
+        $cab .= "Content-Type: multipart/alternative; boundary=\"$alt\"\r\n";
+        $corpo = $alternativo;
+    }
+
+    if ($CFG['smtp_user'] !== '' && $CFG['smtp_pass'] !== '') {
+        $msg = 'Date: ' . date('r') . "\r\nTo: " . implode(', ', $para) . "\r\nSubject: $assuntoCod\r\n"
+             . 'Message-ID: <' . bin2hex(random_bytes(10)) . '@' . substr(strrchr(EMAIL_REMETENTE, '@'), 1) . ">\r\n"
+             . $cab . "\r\n" . $corpo;
+        if (smtpEnviar($CFG, array_merge($para, $cc), $msg, $erro)) return true;
+        @file_put_contents($pasta . '/falhas-email.log', date('c') . " SMTP falhou ($erro); tentando mail()\n", FILE_APPEND);
+    }
+    return @mail(implode(', ', $para), $assuntoCod, $corpo, $cab, '-f' . EMAIL_REMETENTE);
+}
+
+/* ---------- 1) Ficha para a equipe (destino + cópia) ---------- */
+$internos = listaEmails(EMAIL_DESTINO, EMAIL_COPIA);
+$para = listaEmails(EMAIL_DESTINO);
+$cc = array_values(array_diff($internos, $para));
+$wa = soDigitos($d['whatsapp']);
+$h = fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+$contatoEquipe = 'WhatsApp ' . WHATSAPP_SECRETARIA . ' · ' . $h(EMAIL_SECRETARIA);
+
+$enviado = enviarEmail(
+    $para, $cc,
+    "Concurso de Bolsas 2027 – Inscrição $numero – {$d['aluno_nome']}",
+    fichaEmailHtml('Nova inscrição recebida',
+        'Uma nova ficha de inscrição foi enviada pelo site. Os dados completos estão abaixo e também no <strong>PDF anexo</strong>.',
+        $numero, $agora, $secoes, $aceite, 'Chamar responsável no WhatsApp', "https://wa.me/55$wa", $contatoEquipe),
+    fichaEmailTexto('Nova inscrição recebida pelo site.', $numero, $agora, $secoes, $aceite),
+    $d['email'],
+    [$anexo]
+);
 if (!$enviado) {
     @file_put_contents($pasta . '/falhas-email.log', $agora->format('c') . " falha ao enviar $numero\n", FILE_APPEND);
 }
 
-/* ---------- Confirmação para o responsável (se informou e-mail) ---------- */
-if ($d['email'] !== '') {
-    $conf = '<div style="font-family:Arial,sans-serif;max-width:560px;color:#172033">'
-          . '<h2 style="color:#0b3d91">Inscrição recebida!</h2>'
-          . '<p>Olá, ' . $h($d['resp_nome']) . '. Recebemos a inscrição de <strong>' . $h($d['aluno_nome'])
-          . '</strong> no <strong>Concurso de Bolsas 2027</strong> da Fundação Educacional de Tanabi.</p>'
-          . '<p style="font-size:18px">Nº da inscrição: <strong>' . $h($numero) . '</strong></p>'
-          . '<p>Informações sobre data, horário, local da prova e critérios de seleção serão divulgadas pela Fundação.</p>'
-          . '<p>Dúvidas: WhatsApp ' . WHATSAPP_SECRETARIA . ' · ' . EMAIL_SECRETARIA . '</p></div>';
-    enviarEmail($d['email'], "Inscrição $numero – Concurso de Bolsas 2027 – FET", $conf,
-        "Inscrição recebida! Nº $numero - Concurso de Bolsas 2027 - Fundação Educacional de Tanabi. Dúvidas: WhatsApp " . WHATSAPP_SECRETARIA,
-        EMAIL_SECRETARIA);
+/* ---------- 2) Confirmação para o responsável (só se o e-mail dele não for da equipe) ---------- */
+if ($d['email'] !== '' && !in_array(strtolower($d['email']), $internos, true)) {
+    enviarEmail(
+        [$d['email']], [],
+        "Inscrição $numero confirmada – Concurso de Bolsas 2027 – FET",
+        fichaEmailHtml('Inscrição recebida!',
+            'Olá, <strong>' . $h($d['resp_nome']) . '</strong>. Recebemos a inscrição de <strong>' . $h($d['aluno_nome'])
+            . '</strong> no Concurso de Bolsas 2027. Guarde o número <strong>' . $h($numero) . '</strong>. Confira abaixo os dados enviados; a ficha também segue em PDF anexo.',
+            $numero, $agora, $secoes, $aceite, 'Falar com a secretaria no WhatsApp', 'https://wa.me/5517988470429', $contatoEquipe),
+        fichaEmailTexto("Olá, {$d['resp_nome']}. Recebemos a inscrição de {$d['aluno_nome']}. Guarde o número $numero.", $numero, $agora, $secoes, $aceite),
+        EMAIL_SECRETARIA,
+        [$anexo]
+    );
 }
 
 // A inscrição já está gravada no servidor; mesmo se o e-mail falhar, o número é válido.
