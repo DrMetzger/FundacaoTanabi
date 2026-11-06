@@ -16,6 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Versionar CSS/JS (evita cache antigo no navegador)
+        run: sed -i "s/?v=dev/?v=${GITHUB_SHA::8}/g" *.html
+
       - name: Gerar configuração de e-mail (SMTP)
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
