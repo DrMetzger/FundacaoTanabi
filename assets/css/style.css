@@ -594,3 +594,62 @@ html.hc .topbar { background: #fff; }
 .ficha__info .ms { overflow: visible; }
 
 .field__hint .ms { font-size: 1.1em; color: var(--primary-500); margin-right: 2px; overflow: visible; }
+
+/* ================= Conquistas ================= */
+.conquistas { background: linear-gradient(180deg, var(--surface) 0%, var(--surface-tint) 100%); }
+.conq-resumo {
+  display: grid; grid-template-columns: repeat(3, 1fr); max-width: 640px; margin: 0 auto 32px;
+  background: var(--primary); color: #fff; border-radius: var(--radius-l); overflow: hidden; box-shadow: var(--elev-2);
+}
+.conq-resumo div { padding: 16px 8px; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
+.conq-resumo div + div { border-left: 1px solid rgba(255, 255, 255, .18); }
+.conq-resumo strong { font-family: var(--font-display); font-size: clamp(1.8rem, 1.3rem + 2vw, 2.6rem); color: var(--accent); }
+.conq-resumo span { font-size: .85rem; font-weight: 700; opacity: .9; }
+
+.conq-grid { display: grid; gap: 20px; }
+.conq {
+  background: var(--surface); border-radius: var(--radius-l); box-shadow: var(--elev-1); overflow: hidden;
+  display: flex; flex-direction: column; transition: transform .25s, box-shadow .25s;
+}
+.conq:hover { transform: translateY(-4px); box-shadow: var(--elev-3); }
+.conq__foto { margin: 0; position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--surface-2); }
+.conq__foto img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.conq__selo {
+  position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: .82rem; padding: 6px 12px 6px 9px; border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+}
+.conq__selo .ms { font-size: 1.15rem; }
+.conq__corpo { padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.conq h3 { margin: 0; font-size: 1.35rem; }
+.conq h3 small { display: block; font-family: var(--font-body); font-size: .85rem; font-weight: 700; color: var(--on-surface-var); margin-top: 2px; }
+.conq__frase { margin: 0; color: var(--on-surface-var); }
+.conq__numeros { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.conq__numeros div { background: var(--surface-tint); border-radius: var(--radius-s); padding: 10px 12px; display: flex; align-items: baseline; gap: 8px; }
+.conq__numeros strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; color: var(--primary); }
+.conq__numeros span { font-weight: 700; font-size: .88rem; line-height: 1.2; color: var(--on-surface-var); }
+.medalhas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.medalhas li { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px 6px 8px; border-radius: 999px; font-weight: 800; font-size: .88rem; }
+.medalhas .ms { font-size: 1.2rem; }
+.m-ouro { background: #fff3c4; color: #8a6200; }
+.m-prata { background: #eceff3; color: #4b5563; }
+.m-bronze { background: #f7e1cf; color: #8a4b1a; }
+.destaques { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.destaques li { display: flex; align-items: center; gap: 12px; background: var(--surface-tint); border-radius: var(--radius-s); padding: 10px 12px; }
+.destaques li > .ms { width: 40px; height: 40px; border-radius: 12px; background: var(--primary); color: var(--accent); display: grid; place-items: center; flex: none; overflow: visible; }
+.destaques strong { display: block; color: var(--primary); line-height: 1.25; }
+.destaques span { font-size: .88rem; color: var(--on-surface-var); }
+
+.conq-cta {
+  margin-top: 28px; display: grid; gap: 16px; align-items: center; padding: 22px;
+  border-radius: var(--radius-l); background: linear-gradient(120deg, var(--primary-500), var(--primary-700)); color: #fff; box-shadow: var(--elev-2);
+}
+.conq-cta strong { display: block; font-family: var(--font-display); font-size: 1.45rem; line-height: 1.2; color: var(--accent); }
+.conq-cta span { color: rgba(255, 255, 255, .9); }
+.conq-cta .btn { white-space: normal; text-align: center; }
+@media (min-width: 768px) {
+  .conq-grid { grid-template-columns: repeat(2, 1fr); }
+  .conq-cta { grid-template-columns: 1fr auto; padding: 26px 32px; }
+}
+@media (min-width: 1100px) { .conq-grid { grid-template-columns: repeat(3, 1fr); } }
+.topbar .container { max-width: 1360px; }
