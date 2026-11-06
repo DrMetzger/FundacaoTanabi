@@ -592,3 +592,5 @@ html.hc .topbar { background: #fff; }
 [hidden] { display: none !important; }
 .ficha__info .ms, .contact-list .ms, .check__box .ms { flex: none; }
 .ficha__info .ms { overflow: visible; }
+
+.field__hint .ms { font-size: 1.1em; color: var(--primary-500); margin-right: 2px; overflow: visible; }

@@ -110,6 +110,10 @@
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível enviar agora.');
       $('#sucessoNum').textContent = j.numero;
+      const mail = $('#email').value.trim();
+      if (mail) {
+        $('#sucessoMsg').textContent = `Enviamos a confirmação com a ficha em PDF para ${mail}. Se não encontrar, confira a caixa de spam. A secretaria entrará em contato pelo WhatsApp informado.`;
+      }
       const msg = `Olá! Fiz a inscrição nº ${j.numero} no Concurso de Bolsas 2027 (aluno(a): ${$('#aluno_nome').value}).`;
       $('#sucessoWhats').href = `https://wa.me/5517988470429?text=${encodeURIComponent(msg)}`;
       form.hidden = true;
