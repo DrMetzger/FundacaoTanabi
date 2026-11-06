@@ -6,21 +6,7 @@
  */
 declare(strict_types=1);
 
-/* ================== CONFIGURAÇÃO ================== */
-const EMAIL_DESTINO   = 'pcorreajr@primeerp.com.br';                // quem recebe as inscrições (pode separar vários por vírgula)
-const EMAIL_COPIA     = 'secretariafet@tanabinet.com.br';           // recebe cópia (Cc) de cada inscrição
-const EMAIL_SECRETARIA = 'secretariafet@tanabinet.com.br';          // e-mail mostrado às famílias na confirmação
-const EMAIL_REMETENTE_PADRAO = 'nao-responda@objetivotanabi.com.br'; // usado quando não há SMTP configurado
-const NOME_REMETENTE  = 'Site FET – Concurso de Bolsas';
-const PREFIXO_NUMERO  = '2027-';
-const ZERAR_NUMERACAO = 'oficial-2026-11-06';  // trocar este texto zera a numeração uma vez (testes vão para a pasta arquivo-*)
-const WHATSAPP_SECRETARIA = '(17) 98847-0429';
-/* ================================================== */
-
-/* SMTP: api/config.php é gerado no deploy a partir dos secrets SMTP_USER / SMTP_SENHA do GitHub. */
-$CFG = is_file(__DIR__ . '/config.php') ? (array) (include __DIR__ . '/config.php') : [];
-$CFG += ['smtp_host' => 'ssl://smtp.hostinger.com', 'smtp_port' => 465, 'smtp_user' => '', 'smtp_pass' => ''];
-define('EMAIL_REMETENTE', $CFG['smtp_user'] !== '' ? $CFG['smtp_user'] : EMAIL_REMETENTE_PADRAO);
+require __DIR__ . '/lib/comum.php';
 
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -67,7 +53,6 @@ function campo(string $nome, int $max = 160): string
     $v = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $v) ?? '';   // remove quebras/controle (evita injeção de cabeçalho)
     return mb_substr($v, 0, $max);
 }
-function soDigitos(string $v): string { return preg_replace('/\D/', '', $v) ?? ''; }
 function cpfValido(string $cpf): bool
 {
     $c = soDigitos($cpf);
@@ -119,19 +104,6 @@ $nasc = DateTime::createFromFormat('!Y-m-d', $d['aluno_nascimento']);
 if (!$nasc) responder(false, ['erro' => 'Data de nascimento inválida.'], 422);
 $d['aluno_nascimento'] = $nasc->format('d/m/Y');
 
-/* ---------- Pasta de dados (fora do public_html quando possível) ---------- */
-function pastaDados(): string
-{
-    $fora = dirname(__DIR__, 2) . '/inscricoes-bolsas-2027';
-    if (is_dir($fora) || @mkdir($fora, 0700, true)) {
-        if (is_writable($fora)) return $fora;
-    }
-    $dentro = __DIR__ . '/_dados';
-    if (!is_dir($dentro)) @mkdir($dentro, 0700, true);
-    if (!is_file($dentro . '/.htaccess')) @file_put_contents($dentro . '/.htaccess', "Require all denied\nDeny from all\n");
-    if (!is_file($dentro . '/index.html')) @file_put_contents($dentro . '/index.html', '');
-    return $dentro;
-}
 $pasta = pastaDados();
 
 /* ---------- Número sequencial + CSV (com trava) ---------- */
@@ -184,21 +156,7 @@ flock($lock, LOCK_UN); fclose($lock);
 /* ---------- Conteúdo da ficha ---------- */
 require_once __DIR__ . '/lib/ficha.php';
 
-$secoes = [
-    '1. Dados do(a) aluno(a)' => [
-        'Nome completo' => $d['aluno_nome'], 'Data de nascimento' => $d['aluno_nascimento'], 'CPF' => $d['aluno_cpf'],
-        'RG' => $d['aluno_rg'], 'E-mail do(a) aluno(a)' => $d['aluno_email'], 'Escola atual' => $d['escola_atual'],
-        'Ano/série cursado em 2026' => $d['serie_2026'], 'Ano/série pretendido em 2027' => $d['serie_2027'],
-    ],
-    '2. Responsável legal e contatos' => [
-        'Responsável legal' => $d['resp_nome'], 'Vínculo com o aluno' => $d['resp_vinculo'], 'CPF' => $d['resp_cpf'],
-        'WhatsApp principal' => $d['whatsapp'], 'Telefone alternativo' => $d['telefone_alt'],
-        'E-mail do responsável' => $d['email'], 'Outro contato / responsável' => $d['outro_contato'],
-    ],
-    '3. Endereço' => [
-        'Rua / avenida e número' => $d['rua'], 'Bairro' => $d['bairro'], 'Cidade/UF' => $d['cidade'], 'CEP' => $d['cep'],
-    ],
-];
+$secoes = fichaSecoes($d);
 $aceite = 'Declaração e ciência aceitas eletronicamente pelo(a) responsável legal ' . $d['resp_nome']
         . ' em ' . $agora->format('d/m/Y \à\s H:i') . ' (IP ' . ($_SERVER['REMOTE_ADDR'] ?? '-') . ').';
 
@@ -206,92 +164,6 @@ $pdfConteudo = fichaPdf($numero, $agora, $secoes, $aceite);
 $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower((string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $d['aluno_nome']))) ?? 'aluno';
 $anexo = ['nome' => 'Ficha-Inscricao-' . $numero . '-' . trim($slug, '-') . '.pdf', 'tipo' => 'application/pdf', 'dados' => $pdfConteudo];
 @file_put_contents($pasta . '/' . $anexo['nome'], $pdfConteudo);   // cópia do PDF no servidor
-
-/** Envia via SMTP autenticado (SSL). Retorna true se o servidor aceitou a mensagem. */
-function smtpEnviar(array $cfg, array $destinos, string $mensagem, ?string &$erro = null): bool
-{
-    $erro = null;
-    $sock = @stream_socket_client($cfg['smtp_host'] . ':' . $cfg['smtp_port'], $en, $es, 15);
-    if (!$sock) { $erro = "conexão: $es"; return false; }
-    stream_set_timeout($sock, 30);
-    $ler = function () use ($sock): string {
-        $r = '';
-        while (($l = fgets($sock, 1024)) !== false) { $r .= $l; if (strlen($l) < 4 || $l[3] === ' ') break; }
-        return $r;
-    };
-    $cmd = function (?string $c, array $ok) use ($sock, $ler, &$erro): bool {
-        if ($c !== null) fwrite($sock, $c . "\r\n");
-        $r = $ler();
-        if (!in_array((int) substr($r, 0, 3), $ok, true)) {
-            $erro = trim(($c !== null && (str_starts_with($c, 'AUTH') || strlen($c) > 200) ? substr($c, 0, 10) . '…' : (string) $c) . ' -> ' . $r);
-            return false;
-        }
-        return true;
-    };
-    $host = $_SERVER['SERVER_NAME'] ?? 'objetivotanabi.com.br';
-    $ok = $cmd(null, [220]) && $cmd("EHLO $host", [250])
-       && $cmd('AUTH LOGIN', [334]) && $cmd(base64_encode($cfg['smtp_user']), [334]) && $cmd(base64_encode($cfg['smtp_pass']), [235])
-       && $cmd('MAIL FROM:<' . $cfg['smtp_user'] . '>', [250]);
-    foreach ($destinos as $d) { $ok = $ok && $cmd('RCPT TO:<' . $d . '>', [250, 251]); }
-    $dados = preg_replace('/^\./m', '..', str_replace(["\r\n", "\r"], "\n", $mensagem));
-    $dados = str_replace("\n", "\r\n", $dados);
-    $ok = $ok && $cmd('DATA', [354]) && $cmd($dados . "\r\n.", [250]);
-    @fwrite($sock, "QUIT\r\n"); fclose($sock);
-    return $ok;
-}
-
-/** Lista de e-mails separados por vírgula → array limpo, sem repetição. */
-function listaEmails(string ...$listas): array
-{
-    $out = [];
-    foreach ($listas as $l) foreach (explode(',', $l) as $e) {
-        $e = strtolower(trim($e));
-        if ($e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL) && !in_array($e, $out, true)) $out[] = $e;
-    }
-    return $out;
-}
-
-function enviarEmail(array $para, array $cc, string $assunto, string $html, string $texto, string $replyTo = '', array $anexos = []): bool
-{
-    global $CFG, $pasta;
-    $cc = array_values(array_diff($cc, $para));
-    $alt = 'a' . bin2hex(random_bytes(10));
-    $mix = 'm' . bin2hex(random_bytes(10));
-    $de = '=?UTF-8?B?' . base64_encode(NOME_REMETENTE) . '?= <' . EMAIL_REMETENTE . '>';
-    $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
-
-    $cab = "From: $de\r\n";
-    if ($cc) $cab .= 'Cc: ' . implode(', ', $cc) . "\r\n";
-    if ($replyTo !== '') $cab .= "Reply-To: $replyTo\r\n";
-    $cab .= "MIME-Version: 1.0\r\n";
-
-    $alternativo = "--$alt\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
-                 . chunk_split(base64_encode($texto))
-                 . "--$alt\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
-                 . chunk_split(base64_encode($html))
-                 . "--$alt--\r\n";
-    if ($anexos) {
-        $cab .= "Content-Type: multipart/mixed; boundary=\"$mix\"\r\n";
-        $corpo = "--$mix\r\nContent-Type: multipart/alternative; boundary=\"$alt\"\r\n\r\n" . $alternativo;
-        foreach ($anexos as $a) {
-            $corpo .= "--$mix\r\nContent-Type: {$a['tipo']}; name=\"{$a['nome']}\"\r\nContent-Transfer-Encoding: base64\r\n"
-                    . "Content-Disposition: attachment; filename=\"{$a['nome']}\"\r\n\r\n" . chunk_split(base64_encode($a['dados']));
-        }
-        $corpo .= "--$mix--";
-    } else {
-        $cab .= "Content-Type: multipart/alternative; boundary=\"$alt\"\r\n";
-        $corpo = $alternativo;
-    }
-
-    if ($CFG['smtp_user'] !== '' && $CFG['smtp_pass'] !== '') {
-        $msg = 'Date: ' . date('r') . "\r\nTo: " . implode(', ', $para) . "\r\nSubject: $assuntoCod\r\n"
-             . 'Message-ID: <' . bin2hex(random_bytes(10)) . '@' . substr(strrchr(EMAIL_REMETENTE, '@'), 1) . ">\r\n"
-             . $cab . "\r\n" . $corpo;
-        if (smtpEnviar($CFG, array_merge($para, $cc), $msg, $erro)) return true;
-        @file_put_contents($pasta . '/falhas-email.log', date('c') . " SMTP falhou ($erro); tentando mail()\n", FILE_APPEND);
-    }
-    return @mail(implode(', ', $para), $assuntoCod, $corpo, $cab, '-f' . EMAIL_REMETENTE);
-}
 
 /* ---------- 1) Ficha para a equipe (destino + cópia) ---------- */
 $internos = listaEmails(EMAIL_DESTINO, EMAIL_COPIA);
