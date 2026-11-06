@@ -240,7 +240,7 @@ html.hc .topbar { background: #fff; }
 /* ---------- Stats ---------- */
 .stats {
   position: relative; z-index: 2; margin-top: -54px;
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
 }
 .stat {
   background: var(--surface); border-radius: var(--radius-m); box-shadow: var(--elev-2);
@@ -433,16 +433,21 @@ html.hc .topbar { background: #fff; }
 }
 
 /* ================= Breakpoints ================= */
+@media (max-width: 599px) {
+  .stat { padding: 14px 8px; }
+  .stat strong { font-size: 1.3rem; }
+  .stat span:last-child { font-size: .8rem; }
+}
 @media (max-width: 380px) {
   .brand__text strong { font-size: .95rem; }
   .brand__text span { font-size: .72rem; }
-  .stat strong { font-size: 1.35rem; }
+  .stat strong { font-size: 1.15rem; }
 }
 
 /* Tablet */
 @media (min-width: 600px) {
   :root { --gutter: 24px; }
-  .stats { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stats { gap: 16px; max-width: 900px; }
   .features { grid-template-columns: repeat(2, 1fr); }
   .quick { grid-template-columns: repeat(2, 1fr); }
   .values { grid-template-columns: repeat(3, 1fr); }
