@@ -7,7 +7,8 @@
 declare(strict_types=1);
 
 /* ================== CONFIGURAÇÃO ================== */
-const EMAIL_DESTINO   = 'secretariafet@tanabinet.com.br';           // quem recebe as inscrições (pode separar vários por vírgula)
+const EMAIL_DESTINO   = 'pcorreajr@primeerp.com.br';                // quem recebe as inscrições (pode separar vários por vírgula)
+const EMAIL_SECRETARIA = 'secretariafet@tanabinet.com.br';          // e-mail mostrado às famílias na confirmação
 const EMAIL_REMETENTE_PADRAO = 'nao-responda@objetivotanabi.com.br'; // usado quando não há SMTP configurado
 const NOME_REMETENTE  = 'Site FET – Concurso de Bolsas';
 const PREFIXO_NUMERO  = '2027-';
@@ -276,10 +277,10 @@ if ($d['email'] !== '') {
           . '</strong> no <strong>Concurso de Bolsas 2027</strong> da Fundação Educacional de Tanabi.</p>'
           . '<p style="font-size:18px">Nº da inscrição: <strong>' . $h($numero) . '</strong></p>'
           . '<p>Informações sobre data, horário, local da prova e critérios de seleção serão divulgadas pela Fundação.</p>'
-          . '<p>Dúvidas: WhatsApp ' . WHATSAPP_SECRETARIA . ' · ' . EMAIL_DESTINO . '</p></div>';
+          . '<p>Dúvidas: WhatsApp ' . WHATSAPP_SECRETARIA . ' · ' . EMAIL_SECRETARIA . '</p></div>';
     enviarEmail($d['email'], "Inscrição $numero – Concurso de Bolsas 2027 – FET", $conf,
         "Inscrição recebida! Nº $numero - Concurso de Bolsas 2027 - Fundação Educacional de Tanabi. Dúvidas: WhatsApp " . WHATSAPP_SECRETARIA,
-        EMAIL_DESTINO);
+        EMAIL_SECRETARIA);
 }
 
 // A inscrição já está gravada no servidor; mesmo se o e-mail falhar, o número é válido.
