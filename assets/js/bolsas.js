@@ -110,6 +110,16 @@
         headers: { Accept: 'application/json' }
       });
       const j = await r.json().catch(() => ({}));
+      if (j.duplicada) {
+        const campo = form.elements[j.campo];
+        if (campo) { setInvalid(campo, true); campo.focus(); }
+        err.innerHTML = `<strong>Inscrição já realizada.</strong> ${j.erro} Se precisar corrigir algum dado ou consultar o número da inscrição, fale com a secretaria pelo <a href="https://wa.me/5517988470429" target="_blank" rel="noopener">WhatsApp (17) 98847-0429</a>.`;
+        err.hidden = false;
+        err.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        btn.disabled = false;
+        $('.lbl', btn).textContent = 'Enviar inscrição';
+        return;
+      }
       if (!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível enviar agora.');
       $('#sucessoNum').textContent = j.numero;
       const mail = [...new Set([$('#email').value.trim(), $('#aluno_email').value.trim()].filter(Boolean))].join(' e ');

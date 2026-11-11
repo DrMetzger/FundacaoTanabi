@@ -117,6 +117,18 @@ $lock = fopen($pasta . '/contador.lock', 'c+');
 if (!$lock || !flock($lock, LOCK_EX)) responder(false, ['erro' => 'Servidor ocupado. Tente novamente.'], 503);
 
 aplicarZeramento($pasta, $lock);
+
+/* Não permite inscrever o mesmo aluno duas vezes (CPF do aluno, ou nome + nascimento). */
+if ($dup = buscarDuplicada(lerInscricoes($pasta), $d)) {
+    flock($lock, LOCK_UN); fclose($lock);
+    responder(false, [
+        'duplicada' => true,
+        'campo' => $dup['motivo'] === 'cpf' ? 'aluno_cpf' : 'aluno_nome',
+        'erro' => $dup['motivo'] === 'cpf'
+            ? 'Este aluno já está inscrito no Concurso de Bolsas 2027 (CPF do aluno já cadastrado). Não é preciso fazer uma nova inscrição.'
+            : 'Já existe uma inscrição para um aluno com este nome e data de nascimento. Não é preciso fazer uma nova inscrição.',
+    ], 409);
+}
 rewind($lock);
 $ultimo = (int) trim((string) stream_get_contents($lock));
 $seq = $ultimo + 1;

@@ -256,3 +256,29 @@ function apagarPdfs(string $pasta, string $numero, string $destino = ''): void
         else @unlink($f);
     }
 }
+
+/** Nome normalizado para comparação (sem acentos, minúsculo, espaços simples). */
+function chaveNome(string $nome): string
+{
+    $n = (string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower(trim($nome)));
+    return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $n));
+}
+
+/**
+ * Procura inscrição já existente do mesmo aluno: mesmo CPF do aluno, ou mesmo nome + data de nascimento.
+ * @return array{registro: array, motivo: string}|null
+ */
+function buscarDuplicada(array $lista, array $d, string $ignorarNumero = ''): ?array
+{
+    $cpf = soDigitos((string) ($d['aluno_cpf'] ?? ''));
+    $nome = chaveNome((string) ($d['aluno_nome'] ?? ''));
+    $nasc = trim((string) ($d['aluno_nascimento'] ?? ''));
+    foreach ($lista as $r) {
+        if ($ignorarNumero !== '' && ($r['numero'] ?? '') === $ignorarNumero) continue;
+        if (strlen($cpf) === 11 && soDigitos((string) ($r['aluno_cpf'] ?? '')) === $cpf) return ['registro' => $r, 'motivo' => 'cpf'];
+        if ($nome !== '' && $nasc !== '' && chaveNome((string) ($r['aluno_nome'] ?? '')) === $nome && trim((string) ($r['aluno_nascimento'] ?? '')) === $nasc) {
+            return ['registro' => $r, 'motivo' => 'nome'];
+        }
+    }
+    return null;
+}

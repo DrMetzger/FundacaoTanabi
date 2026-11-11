@@ -241,6 +241,10 @@ if ($logado && $acao !== '') {
         $usuario = (string) $_SESSION['adm'];
         $res = comTrava($pasta, function ($lock) use ($pasta, $n, $novo, $usuario) {
             $lista = lerInscricoes($pasta);
+            if ($dup = buscarDuplicada($lista, $novo, $n)) {
+                return ['ok' => false, 'erro' => 'Este aluno já tem a inscrição ' . $dup['registro']['numero'] . ' ('
+                    . ($dup['motivo'] === 'cpf' ? 'mesmo CPF do aluno' : 'mesmo nome e data de nascimento') . ' – ' . $dup['registro']['aluno_nome'] . '). Altere a inscrição existente em vez de criar outra.'];
+            }
             if ($n === '') {
                 $r = $novo + ['numero' => proximoNumero($lock), 'data' => date('d/m/Y H:i:s'), 'ip' => 'manual:' . $usuario];
                 $lista[] = $r;
