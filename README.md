@@ -13,6 +13,8 @@ Secrets usados: `IP_FTP`, `USER_FTP`, `SENHA_FTP`. Também dá para rodar manual
 
 ## Concurso de Bolsas (e-mail)
 
+**Inscrições encerradas.** A ficha pública está fechada (`INSCRICOES_ABERTAS = false` em `api/lib/comum.php`); a área restrita continua com consulta e edição.
+
 A ficha `concurso-de-bolsas.html` envia para `api/inscricao.php`, que gera o número da inscrição, guarda uma cópia em
 `inscricoes-bolsas-2027/inscricoes.csv` (fora do `public_html`) e envia e-mail para pcorreajr@primeerp.com.br (constante EMAIL_DESTINO).
 
