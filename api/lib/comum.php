@@ -9,6 +9,7 @@ const EMAIL_SECRETARIA = 'secretariafet@tanabinet.com.br';          // e-mail mo
 const EMAIL_REMETENTE_PADRAO = 'nao-responda@objetivotanabi.com.br'; // usado quando não há SMTP configurado
 const NOME_REMETENTE  = 'Site FET – Concurso de Bolsas';
 const PREFIXO_NUMERO  = '2027-';
+const INSCRICOES_ABERTAS = false;  // true reabre a ficha pública (a área restrita sempre pode incluir)
 const ZERAR_NUMERACAO = 'oficial-2026-11-06-v2';  // trocar este texto zera a numeração uma vez (testes vão para a pasta arquivo-*)
 const WHATSAPP_SECRETARIA = '(17) 98847-0429';
 /* ================================================== */

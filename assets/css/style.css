@@ -669,3 +669,11 @@ html.hc .topbar { background: #fff; }
 }
 .utilbar__restrito:hover { filter: brightness(1.06); text-decoration: underline; }
 .utilbar__restrito .ms { font-size: 1.1rem; }
+
+/* Concurso encerrado */
+.encerrado { max-width: 640px; margin: 0 auto; background: var(--surface); border-radius: var(--radius-l); box-shadow: var(--elev-2); padding: 36px 22px; text-align: center; }
+.encerrado__icone { width: 84px; height: 84px; margin: 0 auto 12px; border-radius: 50%; background: #fff3cc; color: #9a6b00; display: grid; place-items: center; }
+.encerrado__icone .ms { font-size: 3rem; overflow: visible; width: auto; }
+.encerrado p { color: var(--on-surface-var); }
+.encerrado p strong { color: var(--on-surface); }
+.encerrado__acoes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }

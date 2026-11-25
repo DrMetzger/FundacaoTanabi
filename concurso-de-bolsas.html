@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Concurso de Bolsas 2027 | Fundação Educacional de Tanabi</title>
-  <meta name="description" content="Ficha de inscrição on-line do Concurso de Bolsas 2027 da Fundação Educacional de Tanabi – Objetivo.">
+  <meta name="description" content="As inscrições do Concurso de Bolsas 2027 da Fundação Educacional de Tanabi estão encerradas.">
+  <meta name="robots" content="noindex">
   <meta name="theme-color" content="#0b3d91">
   <link rel="icon" type="image/png" href="assets/img/favicon.png">
   <meta property="og:title" content="Concurso de Bolsas 2027 – Fundação Educacional de Tanabi">
@@ -18,7 +19,6 @@
   <link rel="stylesheet" href="assets/css/style.css?v=dev">
 </head>
 <body class="page-bolsas">
-  <a class="skip-link" href="#ficha">Pular para a ficha</a>
 
   <div class="utilbar">
     <div class="container utilbar__inner">
@@ -44,9 +44,9 @@
   <main>
     <section class="hero hero--compact">
       <div class="container">
-        <span class="pill"><span class="ms" aria-hidden="true">workspace_premium</span> Inscrições abertas</span>
+        <span class="pill"><span class="ms" aria-hidden="true">event_busy</span> Inscrições encerradas</span>
         <h1 class="page-title">Concurso de Bolsas <span>2027</span></h1>
-        <p class="hero__lead">Preencha a ficha de inscrição abaixo. Ela chega direto na secretaria da Fundação, e você recebe o número da sua inscrição na hora.</p>
+        <p class="hero__lead">O período de inscrições terminou. Obrigado a todas as famílias que participaram!</p>
       </div>
       <svg class="clouds" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
         <path fill="#f4b400" d="M0 70 Q60 20 130 55 Q180 10 250 50 Q320 15 380 60 Q470 30 540 65 Q620 25 700 62 Q780 22 860 60 Q940 25 1010 58 Q1090 18 1170 55 Q1250 20 1320 56 Q1390 28 1440 50 V120 H0Z"/>
@@ -55,183 +55,18 @@
     </section>
 
     <section class="bolsas">
-      <div class="container bolsas__container">
-
-        <form class="ficha" id="ficha" action="api/inscricao.php" method="post" novalidate>
-          <!-- anti-spam -->
-          <div class="hp" aria-hidden="true">
-            <label for="website">Não preencha</label>
-            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
-          </div>
-          <input type="hidden" name="t0" id="t0" value="">
-
-          <!-- 1. Aluno -->
-          <fieldset class="ficha__card">
-            <legend><span class="ficha__num">1</span> Dados do(a) aluno(a)</legend>
-            <div class="grid">
-              <div class="field col-12">
-                <input id="aluno_nome" name="aluno_nome" type="text" placeholder=" " autocomplete="off" required maxlength="120">
-                <label for="aluno_nome">Nome completo do(a) aluno(a) *</label>
-              </div>
-              <div class="field col-4">
-                <input id="aluno_nascimento" name="aluno_nascimento" type="date" placeholder=" " required min="2005-01-01" max="2025-12-31">
-                <label for="aluno_nascimento">Data de nascimento *</label>
-              </div>
-              <div class="field col-4">
-                <input id="aluno_cpf" name="aluno_cpf" type="text" inputmode="numeric" placeholder=" " data-mask="cpf" maxlength="14" required>
-                <label for="aluno_cpf">CPF do(a) aluno(a) *</label>
-              </div>
-              <div class="field col-4">
-                <input id="aluno_rg" name="aluno_rg" type="text" placeholder=" " maxlength="20">
-                <label for="aluno_rg">RG (se houver)</label>
-              </div>
-              <div class="field col-12">
-                <input id="aluno_email" name="aluno_email" type="email" inputmode="email" placeholder=" " autocomplete="off" maxlength="120">
-                <label for="aluno_email">E-mail do(a) aluno(a) (se houver)</label>
-                <span class="field__hint"><span class="ms" aria-hidden="true">mark_email_read</span> O(a) aluno(a) também recebe a confirmação da inscrição.</span>
-              </div>
-              <div class="field col-12">
-                <input id="escola_atual" name="escola_atual" type="text" placeholder=" " required maxlength="120">
-                <label for="escola_atual">Escola atual *</label>
-              </div>
-              <div class="field col-6">
-                <select id="serie_2026" name="serie_2026" required>
-                  <option value="" selected disabled></option>
-                  <optgroup label="Educação Infantil">
-                    <option>Educação Infantil</option>
-                  </optgroup>
-                  <optgroup label="Ensino Fundamental">
-                    <option>1º ano – Fundamental</option><option>2º ano – Fundamental</option><option>3º ano – Fundamental</option>
-                    <option>4º ano – Fundamental</option><option>5º ano – Fundamental</option><option>6º ano – Fundamental</option>
-                    <option>7º ano – Fundamental</option><option>8º ano – Fundamental</option><option>9º ano – Fundamental</option>
-                  </optgroup>
-                  <optgroup label="Ensino Médio">
-                    <option>1ª série – Médio</option><option>2ª série – Médio</option><option>3ª série – Médio</option>
-                  </optgroup>
-                </select>
-                <label for="serie_2026">Ano/série cursado em 2026 *</label>
-              </div>
-              <div class="field col-6">
-                <select id="serie_2027" name="serie_2027" required>
-                  <option value="" selected disabled></option>
-                  <optgroup label="Ensino Fundamental">
-                    <option>1º ano – Fundamental</option><option>2º ano – Fundamental</option><option>3º ano – Fundamental</option>
-                    <option>4º ano – Fundamental</option><option>5º ano – Fundamental</option><option>6º ano – Fundamental</option>
-                    <option>7º ano – Fundamental</option><option>8º ano – Fundamental</option><option>9º ano – Fundamental</option>
-                  </optgroup>
-                  <optgroup label="Ensino Médio">
-                    <option>1ª série – Médio</option><option>2ª série – Médio</option><option>3ª série – Médio</option>
-                  </optgroup>
-                </select>
-                <label for="serie_2027">Ano/série pretendido em 2027 *</label>
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- 2. Responsável -->
-          <fieldset class="ficha__card">
-            <legend><span class="ficha__num">2</span> Responsável legal e contatos</legend>
-            <div class="grid">
-              <div class="field col-12">
-                <input id="resp_nome" name="resp_nome" type="text" placeholder=" " autocomplete="name" required maxlength="120">
-                <label for="resp_nome">Nome do(a) responsável legal *</label>
-              </div>
-              <div class="field col-6">
-                <select id="resp_vinculo" name="resp_vinculo" required>
-                  <option value="" selected disabled></option>
-                  <option>Mãe</option><option>Pai</option><option>Avó / Avô</option><option>Tia / Tio</option><option>Tutor(a) legal</option><option>Outro</option>
-                </select>
-                <label for="resp_vinculo">Vínculo com o aluno *</label>
-              </div>
-              <div class="field col-6">
-                <input id="resp_cpf" name="resp_cpf" type="text" inputmode="numeric" placeholder=" " data-mask="cpf" maxlength="14" required>
-                <label for="resp_cpf">CPF do(a) responsável *</label>
-              </div>
-              <div class="field col-6">
-                <input id="whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder=" " data-mask="tel" maxlength="15" autocomplete="tel" required>
-                <label for="whatsapp">WhatsApp principal *</label>
-              </div>
-              <div class="field col-6">
-                <input id="telefone_alt" name="telefone_alt" type="tel" inputmode="tel" placeholder=" " data-mask="tel" maxlength="15">
-                <label for="telefone_alt">Telefone alternativo</label>
-              </div>
-              <div class="field col-12">
-                <input id="email" name="email" type="email" inputmode="email" placeholder=" " autocomplete="email" maxlength="120">
-                <label for="email">E-mail do responsável</label>
-                <span class="field__hint"><span class="ms" aria-hidden="true">mark_email_read</span> Informe para receber a confirmação da inscrição com a ficha em PDF.</span>
-              </div>
-              <div class="field col-12">
-                <input id="outro_contato" name="outro_contato" type="text" placeholder=" " maxlength="160">
-                <label for="outro_contato">Outro contato / responsável (opcional)</label>
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- 3. Endereço -->
-          <fieldset class="ficha__card">
-            <legend><span class="ficha__num">3</span> Endereço</legend>
-            <div class="grid">
-              <div class="field col-4">
-                <input id="cep" name="cep" type="text" inputmode="numeric" placeholder=" " data-mask="cep" maxlength="9" autocomplete="postal-code" required>
-                <label for="cep">CEP *</label>
-                <span class="field__hint" id="cepHint">Preenchemos o endereço para você.</span>
-              </div>
-              <div class="field col-8">
-                <input id="rua" name="rua" type="text" placeholder=" " autocomplete="address-line1" required maxlength="160">
-                <label for="rua">Rua / avenida e número *</label>
-              </div>
-              <div class="field col-6">
-                <input id="bairro" name="bairro" type="text" placeholder=" " required maxlength="80">
-                <label for="bairro">Bairro *</label>
-              </div>
-              <div class="field col-6">
-                <input id="cidade" name="cidade" type="text" placeholder=" " value="Tanabi/SP" required maxlength="80">
-                <label for="cidade">Cidade/UF *</label>
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- 4. Declaração -->
-          <fieldset class="ficha__card">
-            <legend><span class="ficha__num">4</span> Declaração e ciência</legend>
-            <p class="ficha__decl">Declaro que as informações prestadas são verdadeiras e que estou ciente de que a inscrição não garante a concessão de bolsa, a qual dependerá dos critérios previstos no regulamento do concurso. Estou ciente de que os dados informados serão utilizados pela Fundação Educacional de Tanabi para inscrição, organização da prova e comunicação sobre o processo seletivo.</p>
-            <label class="check">
-              <input type="checkbox" name="declaracao" id="declaracao" value="sim" required>
-              <span class="check__box" aria-hidden="true"><span class="ms">check</span></span>
-              <span>Li e concordo com a declaração acima, como responsável legal pelo(a) aluno(a). *</span>
-            </label>
-            <p class="ficha__info"><span class="ms" aria-hidden="true">info</span> Informações sobre data, horário, local da prova e critérios de seleção serão divulgadas pela Fundação.</p>
-          </fieldset>
-
-          <p class="form__error" id="fichaError" role="alert" hidden></p>
-          <button class="btn btn--accent btn--lg btn--block" type="submit" id="fichaSubmit">
-            <span class="ms" aria-hidden="true">send</span> <span class="lbl">Enviar inscrição</span>
-          </button>
-          <p class="ficha__req">* Campos obrigatórios</p>
-        </form>
-
-        <!-- Sucesso -->
-        <div class="sucesso" id="sucesso" hidden tabindex="-1">
-          <div class="sucesso__icon"><span class="ms" aria-hidden="true">task_alt</span></div>
-          <h2>Inscrição enviada!</h2>
-          <p>Guarde o número da sua inscrição:</p>
-          <p class="sucesso__num" id="sucessoNum">—</p>
-          <p id="sucessoMsg">A secretaria da Fundação recebeu os seus dados e entrará em contato pelo WhatsApp informado.</p>
-          <div class="sucesso__actions">
-            <a class="btn btn--whats" id="sucessoWhats" href="https://wa.me/5517988470429" target="_blank" rel="noopener"><span class="ms" aria-hidden="true">chat</span> Falar com a secretaria</a>
+      <div class="container">
+        <div class="encerrado">
+          <div class="encerrado__icone"><span class="ms" aria-hidden="true">event_busy</span></div>
+          <h2>Inscrições encerradas</h2>
+          <p>O período de inscrições do <strong>Concurso de Bolsas 2027</strong> terminou. Agradecemos a todas as famílias que se inscreveram!</p>
+          <p>Quem já fez a inscrição não precisa fazer nada agora. Informações sobre data, horário, local da prova e critérios de seleção serão divulgadas pela Fundação.</p>
+          <div class="encerrado__acoes">
+            <a class="btn btn--whats" href="https://wa.me/5517988470429" target="_blank" rel="noopener"><span class="ms" aria-hidden="true">chat</span> Dúvidas: (17) 98847-0429</a>
+            <a class="btn btn--accent" href="https://wa.me/5517981260002?text=Ol%C3%A1!%20Gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20matr%C3%ADculas%202027." target="_blank" rel="noopener"><span class="ms" aria-hidden="true">how_to_reg</span> Matrículas 2027</a>
             <a class="btn btn--outlined" href="index.html"><span class="ms" aria-hidden="true">home</span> Voltar ao site</a>
           </div>
         </div>
-
-        <aside class="bolsas__aside">
-          <div class="aside-card">
-            <h3><span class="ms" aria-hidden="true">help</span> Dúvidas?</h3>
-            <p>Fale com a secretaria:</p>
-            <p><a href="https://wa.me/5517988470429" target="_blank" rel="noopener">(17) 98847-0429</a> · WhatsApp<br>
-               <a href="mailto:secretariafet@tanabinet.com.br">secretariafet@tanabinet.com.br</a></p>
-            <p class="muted">Rua José Siriani, 927 – Centro – Tanabi/SP</p>
-          </div>
-        </aside>
       </div>
     </section>
   </main>
@@ -242,6 +77,5 @@
     </div>
   </footer>
 
-  <script src="assets/js/bolsas.js?v=dev" defer></script>
 </body>
 </html>

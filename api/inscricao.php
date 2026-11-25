@@ -37,6 +37,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     responder(false, ['erro' => 'Método não permitido.'], 405);
 }
 
+if (!INSCRICOES_ABERTAS) {
+    responder(false, ['erro' => 'As inscrições do Concurso de Bolsas 2027 estão encerradas.'], 410);
+}
+
 /* ---------- Anti-spam ---------- */
 if (!empty($_POST['website'])) {                       // honeypot preenchido = robô
     responder(true, ['numero' => PREFIXO_NUMERO . '0000']);
